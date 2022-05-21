@@ -105,6 +105,8 @@ func (f Frame) MarshalText() ([]byte, error) {
 	return []byte(f.String()), nil
 }
 
+// MarshalJSON returns the JSON representation of Frame with three fields:
+// function name, file name and line.
 func (f Frame) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Function string `json:"function"`
@@ -147,6 +149,8 @@ func (st StackTrace) Format(s fmt.State, verb rune) {
 	}
 }
 
+// String formats stack trace as a text string. The output is the
+// same as that of fmt.Sprintf("%+v", st).
 func (st StackTrace) String() string {
 	var s strings.Builder
 	for i, frame := range st {
@@ -158,6 +162,8 @@ func (st StackTrace) String() string {
 	return s.String()
 }
 
+// Strings returns as a slice of formatted strings. Every Frame formatted same as that of fmt.Sprintf("%+v", f),
+// but without newlines or tabs.
 func (st StackTrace) Strings() []string {
 	s := make([]string, len(st))
 	for i, frame := range st {
@@ -166,6 +172,8 @@ func (st StackTrace) Strings() []string {
 	return s
 }
 
+// MarshalJSON returns the JSON array representation of every Frame with three fields:
+// function name, file name and line.
 func (st StackTrace) MarshalJSON() ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString("[")

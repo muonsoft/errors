@@ -2,6 +2,7 @@ package errors_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Error("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:19",
+					"\t.+/errors/errors_test.go:20",
 			},
 		},
 		{
@@ -27,7 +28,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Error("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:27",
+					"\t.+/errors/errors_test.go:28",
 			},
 		},
 		{
@@ -35,7 +36,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:35",
+					"\t.+/errors/errors_test.go:36",
 			},
 		},
 		{
@@ -43,7 +44,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:43",
+					"\t.+/errors/errors_test.go:44",
 			},
 		},
 		{
@@ -51,7 +52,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:51",
+					"\t.+/errors/errors_test.go:52",
 			},
 		},
 		{
@@ -59,7 +60,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:59",
+					"\t.+/errors/errors_test.go:60",
 			},
 		},
 		{
@@ -67,7 +68,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:67",
+					"\t.+/errors/errors_test.go:68",
 			},
 		},
 		{
@@ -75,7 +76,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%%w %v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:75",
+					"\t.+/errors/errors_test.go:76",
 			},
 		},
 		{
@@ -83,7 +84,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%s: %w", "prefix", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:83",
+					"\t.+/errors/errors_test.go:84",
 			},
 		},
 		{
@@ -91,7 +92,15 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:91",
+					"\t.+/errors/errors_test.go:92",
+			},
+		},
+		{
+			name: `Errorf("%w", fmt.Errorf("%w", Error()))`,
+			err:  errors.Errorf("%w", fmt.Errorf("%w", errors.New("ooh"))),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:100",
 			},
 		},
 		{
@@ -99,9 +108,9 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:140",
+					"\t.+/errors/errors_test.go:157",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:99",
+					"\t.+/errors/errors_test.go:108",
 			},
 		},
 		{
@@ -109,7 +118,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCaller(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:109",
+					"\t.+/errors/errors_test.go:118",
 			},
 		},
 		{
@@ -117,7 +126,15 @@ func TestStackTrace(t *testing.T) {
 			err:  errorSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:117",
+					"\t.+/errors/errors_test.go:126",
+			},
+		},
+		{
+			name: `errorf skip caller`,
+			err:  errorfSkipCaller("ooh"),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:134",
 			},
 		},
 	}
@@ -148,9 +165,11 @@ func errorSkipCaller(message string) error {
 	return errors.Error(message, errors.SkipCaller())
 }
 
-func TestFields(t *testing.T) {
-	const key = "key"
+func errorfSkipCaller(message string) error {
+	return errors.Errorf(message, errors.SkipCaller())
+}
 
+func TestFields(t *testing.T) {
 	tests := []struct {
 		name     string
 		err      error
@@ -158,62 +177,75 @@ func TestFields(t *testing.T) {
 	}{
 		{
 			name:     "bool",
-			err:      errors.Wrap(errors.Error("error"), errors.Bool(key, true)),
+			err:      errors.Wrap(errors.Error("error"), errors.Bool("key", true)),
 			expected: true,
 		},
 		{
 			name:     "int",
-			err:      errors.Wrap(errors.Error("error"), errors.Int(key, 1)),
+			err:      errors.Wrap(errors.Error("error"), errors.Int("key", 1)),
 			expected: 1,
 		},
 		{
 			name:     "uint",
-			err:      errors.Wrap(errors.Error("error"), errors.Uint(key, 1)),
+			err:      errors.Wrap(errors.Error("error"), errors.Uint("key", 1)),
 			expected: uint(1),
 		},
 		{
 			name:     "float",
-			err:      errors.Wrap(errors.Error("error"), errors.Float(key, 1.0)),
+			err:      errors.Wrap(errors.Error("error"), errors.Float("key", 1.0)),
 			expected: 1.0,
 		},
 		{
 			name:     "string",
-			err:      errors.Wrap(errors.Error("error"), errors.String(key, "value")),
+			err:      errors.Wrap(errors.Error("error"), errors.String("key", "value")),
 			expected: "value",
 		},
 		{
 			name:     "strings",
-			err:      errors.Wrap(errors.Error("error"), errors.Strings(key, []string{"value"})),
+			err:      errors.Wrap(errors.Error("error"), errors.Strings("key", []string{"value"})),
 			expected: []string{"value"},
 		},
 		{
 			name:     "value",
-			err:      errors.Wrap(errors.Error("error"), errors.Value(key, "value")),
+			err:      errors.Wrap(errors.Error("error"), errors.Value("key", "value")),
 			expected: "value",
 		},
 		{
-			name:     "time",
-			err:      errors.Wrap(errors.Error("error"), errors.Time(key, time.Date(2022, 05, 20, 12, 0, 0, 0, time.UTC))),
-			expected: time.Date(2022, 05, 20, 12, 0, 0, 0, time.UTC),
+			name: "time",
+			err: errors.Wrap(
+				errors.Error("error"),
+				errors.Time("key", time.Date(2022, 0o5, 20, 12, 0, 0, 0, time.UTC)),
+			),
+			expected: time.Date(2022, 0o5, 20, 12, 0, 0, 0, time.UTC),
 		},
 		{
 			name:     "duration",
-			err:      errors.Wrap(errors.Error("error"), errors.Duration(key, time.Hour)),
+			err:      errors.Wrap(errors.Error("error"), errors.Duration("key", time.Hour)),
 			expected: time.Hour,
 		},
 		{
 			name:     "JSON",
-			err:      errors.Wrap(errors.Error("error"), errors.JSON(key, []byte(`{"key":"value"}`))),
+			err:      errors.Wrap(errors.Error("error"), errors.JSON("key", []byte(`{"key":"value"}`))),
 			expected: json.RawMessage(`{"key":"value"}`),
 		},
 		{
 			name:     "wrap with stack",
-			err:      errors.Wrap(errors.New("error"), errors.String(key, "value")),
+			err:      errors.Wrap(errors.New("error"), errors.String("key", "value")),
 			expected: "value",
 		},
 		{
 			name:     "error with fields",
-			err:      errors.Error("error", errors.String(key, "value")),
+			err:      errors.Error("error", errors.String("key", "value")),
+			expected: "value",
+		},
+		{
+			name:     "errorf with fields",
+			err:      errors.Errorf("error: %s", "string", errors.String("key", "value")),
+			expected: "value",
+		},
+		{
+			name:     "errorf with fields and wrapped error",
+			err:      errors.Errorf("%w", errors.Error("ooh"), errors.String("key", "value")),
 			expected: "value",
 		},
 	}
@@ -225,14 +257,13 @@ func TestFields(t *testing.T) {
 			}
 			logger := NewLoggerMock()
 			err.WriteFieldsTo(logger)
-			logger.AssertField(t, key, test.expected)
+			logger.AssertField(t, "key", test.expected)
 		})
 	}
 }
 
 func TestWrap_nil(t *testing.T) {
 	err := errors.Wrap(nil)
-
 	if err != nil {
 		t.Error("want nil error, got:", err)
 	}

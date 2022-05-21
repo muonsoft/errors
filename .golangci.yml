@@ -1,0 +1,83 @@
+linters:
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - cyclop
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - exportloopref
+    - forbidigo
+    - funlen
+    - gci
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - gofumpt
+    - goimports
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - lll
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - noctx
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - promlinter
+    - revive
+    - structcheck
+    - stylecheck
+    - tenv
+    - testpackage
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - contextcheck
+        - cyclop
+        - dupl
+        - errcheck
+        - exportloopref
+        - funlen
+        - gochecknoglobals
+        - goconst
+        - gocritic
+        - gocyclo
+        - gosec
+        - lll
+    - path: errors\.go
+      linters:
+        - errcheck
+    - path: stack\.go
+      linters:
+        - errcheck
+        - goconst
+        - gocritic
