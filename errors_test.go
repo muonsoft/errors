@@ -16,8 +16,8 @@ func TestStackTrace(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "Error()",
-			err:  errors.Error("ooh"),
+			name: "Errorf()",
+			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
 					"\t.+/errors/errors_test.go:20",
@@ -25,7 +25,7 @@ func TestStackTrace(t *testing.T) {
 		},
 		{
 			name: "Wrap(Error())",
-			err:  errors.Wrap(errors.Error("ooh")),
+			err:  errors.Wrap(errors.Errorf("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
 					"\t.+/errors/errors_test.go:28",
@@ -108,7 +108,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:157",
+					"\t.+/errors/errors_test.go:149",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
 					"\t.+/errors/errors_test.go:108",
 			},
@@ -122,19 +122,11 @@ func TestStackTrace(t *testing.T) {
 			},
 		},
 		{
-			name: `error skip caller`,
-			err:  errorSkipCaller("ooh"),
-			want: []string{
-				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:126",
-			},
-		},
-		{
 			name: `errorf skip caller`,
 			err:  errorfSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:134",
+					"\t.+/errors/errors_test.go:126",
 			},
 		},
 	}
@@ -161,10 +153,6 @@ func wrapSkipCaller(err error) error {
 	return errors.Wrap(err, errors.SkipCaller())
 }
 
-func errorSkipCaller(message string) error {
-	return errors.Error(message, errors.SkipCaller())
-}
-
 func errorfSkipCaller(message string) error {
 	return errors.Errorf(message, errors.SkipCaller())
 }
@@ -177,55 +165,55 @@ func TestFields(t *testing.T) {
 	}{
 		{
 			name:     "bool",
-			err:      errors.Wrap(errors.Error("error"), errors.Bool("key", true)),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Bool("key", true)),
 			expected: true,
 		},
 		{
 			name:     "int",
-			err:      errors.Wrap(errors.Error("error"), errors.Int("key", 1)),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Int("key", 1)),
 			expected: 1,
 		},
 		{
 			name:     "uint",
-			err:      errors.Wrap(errors.Error("error"), errors.Uint("key", 1)),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Uint("key", 1)),
 			expected: uint(1),
 		},
 		{
 			name:     "float",
-			err:      errors.Wrap(errors.Error("error"), errors.Float("key", 1.0)),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Float("key", 1.0)),
 			expected: 1.0,
 		},
 		{
 			name:     "string",
-			err:      errors.Wrap(errors.Error("error"), errors.String("key", "value")),
+			err:      errors.Wrap(errors.Errorf("error"), errors.String("key", "value")),
 			expected: "value",
 		},
 		{
 			name:     "strings",
-			err:      errors.Wrap(errors.Error("error"), errors.Strings("key", []string{"value"})),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Strings("key", []string{"value"})),
 			expected: []string{"value"},
 		},
 		{
 			name:     "value",
-			err:      errors.Wrap(errors.Error("error"), errors.Value("key", "value")),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Value("key", "value")),
 			expected: "value",
 		},
 		{
 			name: "time",
 			err: errors.Wrap(
-				errors.Error("error"),
+				errors.Errorf("error"),
 				errors.Time("key", time.Date(2022, 0o5, 20, 12, 0, 0, 0, time.UTC)),
 			),
 			expected: time.Date(2022, 0o5, 20, 12, 0, 0, 0, time.UTC),
 		},
 		{
 			name:     "duration",
-			err:      errors.Wrap(errors.Error("error"), errors.Duration("key", time.Hour)),
+			err:      errors.Wrap(errors.Errorf("error"), errors.Duration("key", time.Hour)),
 			expected: time.Hour,
 		},
 		{
 			name:     "JSON",
-			err:      errors.Wrap(errors.Error("error"), errors.JSON("key", []byte(`{"key":"value"}`))),
+			err:      errors.Wrap(errors.Errorf("error"), errors.JSON("key", []byte(`{"key":"value"}`))),
 			expected: json.RawMessage(`{"key":"value"}`),
 		},
 		{
@@ -235,7 +223,7 @@ func TestFields(t *testing.T) {
 		},
 		{
 			name:     "error with fields",
-			err:      errors.Error("error", errors.String("key", "value")),
+			err:      errors.Errorf("error", errors.String("key", "value")),
 			expected: "value",
 		},
 		{
@@ -245,18 +233,18 @@ func TestFields(t *testing.T) {
 		},
 		{
 			name:     "errorf with fields and wrapped error",
-			err:      errors.Errorf("%w", errors.Error("ooh"), errors.String("key", "value")),
+			err:      errors.Errorf("%w", errors.Errorf("ooh"), errors.String("key", "value")),
 			expected: "value",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var err errors.FieldWriter
+			var err errors.LoggableError
 			if !errors.As(test.err, &err) {
-				t.Fatalf("expected %#v to implement errors.FieldWriter", test.err)
+				t.Fatalf("expected %#v to implement errors.LoggableError", test.err)
 			}
 			logger := NewLoggerMock()
-			err.WriteFieldsTo(logger)
+			err.LogFields(logger)
 			logger.AssertField(t, "key", test.expected)
 		})
 	}

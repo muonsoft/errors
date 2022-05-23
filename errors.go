@@ -61,28 +61,13 @@ func Unwrap(err error) error {
 	return errors.Unwrap(err)
 }
 
-// Error returns an error with the supplied message.
-// Error also records the stack trace at the point it was called.
-// Also, you can pass an options to set a structured fields or to skip a caller
-// in a stack trace.
-//
-// This is equivalent to New function from github.com/pkg/errors.
-func Error(message string, options ...Option) error {
-	opts := newOptions(options...)
-
-	return &stacked{
-		wrapped: &wrapped{wrapped: New(message), fields: opts.fields},
-		stack:   callers(opts.skipCallers),
-	}
-}
-
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error. You can wrap an error using %w modifier as it
 // does fmt.Errorf function.
 // Errorf also records the stack trace at the point it was called. If the wrapped error
 // contains a stack trace then a new one will not be added to a chain.
 // Also, you can pass an options to set a structured fields or to skip a caller
-// in a stack trace. Options must be set at the end of the parameters.
+// in a stack trace. Options must be specified after formatting arguments.
 func Errorf(message string, argsAndOptions ...interface{}) error {
 	args, options := splitArgsAndOptions(argsAndOptions)
 	opts := newOptions(options...)
@@ -144,9 +129,9 @@ func (e *wrapped) Fields() []Field { return e.fields }
 func (e *wrapped) Error() string   { return e.wrapped.Error() }
 func (e *wrapped) Unwrap() error   { return e.wrapped }
 
-func (e *wrapped) WriteFieldsTo(setter FieldSetter) {
+func (e *wrapped) LogFields(logger FieldLogger) {
 	for _, field := range e.fields {
-		field.Set(setter)
+		field.Set(logger)
 	}
 }
 
@@ -155,8 +140,8 @@ func (e *wrapped) MarshalJSON() ([]byte, error) {
 
 	var err error
 	for err = e; err != nil; err = Unwrap(err) {
-		if w, ok := err.(FieldWriter); ok {
-			w.WriteFieldsTo(data)
+		if w, ok := err.(LoggableError); ok {
+			w.LogFields(data)
 		}
 		if s, ok := err.(stackTracer); ok {
 			data.SetStackTrace(s.StackTrace())
@@ -190,7 +175,7 @@ func (e *stacked) Format(s fmt.State, verb rune) {
 func (e *stacked) MarshalJSON() ([]byte, error) {
 	data := mapWriter{"error": e.Error()}
 	data.SetStackTrace(e.StackTrace())
-	e.WriteFieldsTo(data)
+	e.LogFields(data)
 
 	return json.Marshal(data)
 }

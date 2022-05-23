@@ -25,7 +25,7 @@ func TestLog_errorWithStack(t *testing.T) {
 
 	err := errors.Wrap(
 		errors.Wrap(
-			errors.Error("ooh", errors.String("deepestKey", "deepestValue")),
+			errors.Errorf("ooh", errors.String("deepestKey", "deepestValue")),
 			errors.String("deepKey", "deepValue"),
 		),
 		errors.String("key", "value"),

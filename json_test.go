@@ -8,7 +8,7 @@ import (
 )
 
 func TestStackedError_MarshalJSON(t *testing.T) {
-	err := errors.Error("ooh", errors.String("key", "value"))
+	err := errors.Errorf("ooh", errors.String("key", "value"))
 	jsonData, e := json.Marshal(err)
 	if e != nil {
 		t.Fatalf("expected %#v to be marshalable into json: %v", err, e)
@@ -36,7 +36,7 @@ func TestStackedError_MarshalJSON(t *testing.T) {
 
 func TestWrappedError_MarshalJSON(t *testing.T) {
 	err := errors.Wrap(
-		errors.Error("ooh", errors.String("deepKey", "deepValue")),
+		errors.Errorf("ooh", errors.String("deepKey", "deepValue")),
 		errors.String("key", "value"),
 	)
 	jsonData, e := json.Marshal(err)
