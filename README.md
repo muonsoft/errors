@@ -83,6 +83,6 @@ if err != nil {
 	return nil, errors.Wrap(
 		err,
 		errors.Int("userID", userID),
-    )
+	)
 }
 ```

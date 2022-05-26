@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/muonsoft/errors"
+	"github.com/muonsoft/errors/errorstest"
 )
 
 func TestStackTrace(t *testing.T) {
@@ -20,7 +21,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:20",
+					"\t.+/errors/errors_test.go:21",
 			},
 		},
 		{
@@ -28,7 +29,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Errorf("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:28",
+					"\t.+/errors/errors_test.go:29",
 			},
 		},
 		{
@@ -36,7 +37,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:36",
+					"\t.+/errors/errors_test.go:37",
 			},
 		},
 		{
@@ -44,7 +45,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:44",
+					"\t.+/errors/errors_test.go:45",
 			},
 		},
 		{
@@ -52,7 +53,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:52",
+					"\t.+/errors/errors_test.go:53",
 			},
 		},
 		{
@@ -60,7 +61,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:60",
+					"\t.+/errors/errors_test.go:61",
 			},
 		},
 		{
@@ -68,7 +69,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:68",
+					"\t.+/errors/errors_test.go:69",
 			},
 		},
 		{
@@ -76,7 +77,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%%w %v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:76",
+					"\t.+/errors/errors_test.go:77",
 			},
 		},
 		{
@@ -84,7 +85,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%s: %w", "prefix", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:84",
+					"\t.+/errors/errors_test.go:85",
 			},
 		},
 		{
@@ -92,7 +93,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:92",
+					"\t.+/errors/errors_test.go:93",
 			},
 		},
 		{
@@ -100,7 +101,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", fmt.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:100",
+					"\t.+/errors/errors_test.go:101",
 			},
 		},
 		{
@@ -108,9 +109,9 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:149",
+					"\t.+/errors/errors_test.go:150",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:108",
+					"\t.+/errors/errors_test.go:109",
 			},
 		},
 		{
@@ -118,7 +119,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCaller(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:118",
+					"\t.+/errors/errors_test.go:119",
 			},
 		},
 		{
@@ -126,7 +127,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errorfSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:126",
+					"\t.+/errors/errors_test.go:127",
 			},
 		},
 	}
@@ -243,7 +244,7 @@ func TestFields(t *testing.T) {
 			if !errors.As(test.err, &err) {
 				t.Fatalf("expected %#v to implement errors.LoggableError", test.err)
 			}
-			logger := NewLoggerMock()
+			logger := errorstest.NewLogger()
 			err.LogFields(logger)
 			logger.AssertField(t, "key", test.expected)
 		})

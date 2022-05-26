@@ -4,16 +4,17 @@ import (
 	"testing"
 
 	"github.com/muonsoft/errors"
+	"github.com/muonsoft/errors/errorstest"
 )
 
 func TestLog_noError(t *testing.T) {
-	logger := NewLoggerMock()
+	logger := errorstest.NewLogger()
 
 	errors.Log(nil, logger)
 }
 
 func TestLog_errorWithoutStack(t *testing.T) {
-	logger := NewLoggerMock()
+	logger := errorstest.NewLogger()
 
 	errors.Log(errors.New("ooh"), logger)
 
@@ -21,7 +22,7 @@ func TestLog_errorWithoutStack(t *testing.T) {
 }
 
 func TestLog_errorWithStack(t *testing.T) {
-	logger := NewLoggerMock()
+	logger := errorstest.NewLogger()
 
 	err := errors.Wrap(
 		errors.Wrap(
@@ -33,11 +34,11 @@ func TestLog_errorWithStack(t *testing.T) {
 	errors.Log(err, logger)
 
 	logger.AssertMessage(t, "ooh")
-	logger.AssertStackTrace(t, JSONStack{
+	logger.AssertStackTrace(t, errorstest.StackTrace{
 		{
 			Function: "github.com/muonsoft/errors_test.TestLog_errorWithStack",
 			File:     ".+errors/logging_test.go",
-			Line:     28,
+			Line:     29,
 		},
 	})
 	logger.AssertField(t, "key", "value")

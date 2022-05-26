@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/muonsoft/errors"
+	"github.com/muonsoft/errors/errorstest"
 )
 
 const adminUser = 123
@@ -36,19 +37,19 @@ func ExampleLog_loggableError() {
 	err := DoSomething(1)
 
 	// Log error with structured logger.
-	logger := NewLogger()
+	logger := errorstest.NewLogger()
 	errors.Log(err, logger)
-	fmt.Println(`logged message:`, logger.message)
-	fmt.Println(`logged fields:`, logger.fields)
+	fmt.Println(`logged message:`, logger.Message)
+	fmt.Println(`logged fields:`, logger.Fields)
 	fmt.Printf(
 		"logged first line of stack trace: %s %s:%d\n",
-		logger.trace[0].Name(),
-		logger.trace[0].File()[strings.LastIndex(logger.trace[0].File(), "/")+1:],
-		logger.trace[0].Line(),
+		logger.StackTrace[0].Name(),
+		logger.StackTrace[0].File()[strings.LastIndex(logger.StackTrace[0].File(), "/")+1:],
+		logger.StackTrace[0].Line(),
 	)
 
 	// Output:
 	// logged message: access denied
 	// logged fields: map[action:DoSomething userID:1]
-	// logged first line of stack trace: github.com/muonsoft/errors_test.DoSomething example_loggable_test.go:29
+	// logged first line of stack trace: github.com/muonsoft/errors_test.DoSomething example_loggable_test.go:30
 }

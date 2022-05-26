@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/muonsoft/errors"
+	"github.com/muonsoft/errors/errorstest"
 )
 
 var initpc = caller()
@@ -52,7 +53,7 @@ func TestFrame_Format(t *testing.T) {
 		{
 			initpc,
 			"%d",
-			"11",
+			"12",
 		},
 		{
 			0,
@@ -88,13 +89,13 @@ func TestFrame_Format(t *testing.T) {
 		{
 			initpc,
 			"%v",
-			"stack_test.go:11",
+			"stack_test.go:12",
 		},
 		{
 			initpc,
 			"%+v",
 			"github.com/muonsoft/errors_test.init\n" +
-				"\t.+/errors/stack_test.go:11",
+				"\t.+/errors/stack_test.go:12",
 		},
 		{
 			0,
@@ -163,21 +164,21 @@ func TestStackTrace_Format(t *testing.T) {
 		{
 			stackTrace()[:2],
 			"%v",
-			`\[stack_test.go:203 stack_test.go:164\]`,
+			`\[stack_test.go:204 stack_test.go:165\]`,
 		},
 		{
 			stackTrace()[:2],
 			"%+v",
 			"\n" +
 				"github.com/muonsoft/errors_test.stackTrace\n" +
-				"\t.+/errors/stack_test.go:203\n" +
+				"\t.+/errors/stack_test.go:204\n" +
 				"github.com/muonsoft/errors_test.TestStackTrace_Format\n" +
-				"\t.+/errors/stack_test.go:169",
+				"\t.+/errors/stack_test.go:170",
 		},
 		{
 			stackTrace()[:2],
 			"%#v",
-			`\[\]errors.Frame{stack_test.go:203, stack_test.go:178}`,
+			`\[\]errors.Frame{stack_test.go:204, stack_test.go:179}`,
 		},
 	}
 	for _, test := range tests {
@@ -223,7 +224,7 @@ func TestStackTrace_String(t *testing.T) {
 	s := stacked.StackTrace().String()
 
 	assertFormatRegexp(t, s, "%s",
-		"github.com/muonsoft/errors_test.TestStackTrace_String\n\t.+/errors/stack_test.go:218.*",
+		"github.com/muonsoft/errors_test.TestStackTrace_String\n\t.+/errors/stack_test.go:219.*",
 	)
 }
 
@@ -236,7 +237,7 @@ func TestStackTrace_Strings(t *testing.T) {
 	s := stacked.StackTrace().Strings()
 
 	assertStringsRegexp(t, s, []string{
-		"github.com/muonsoft/errors_test.TestStackTrace_Strings .+/errors/stack_test.go:231",
+		"github.com/muonsoft/errors_test.TestStackTrace_Strings .+/errors/stack_test.go:232",
 	})
 }
 
@@ -251,17 +252,17 @@ func TestStackTrace_MarshalJSON(t *testing.T) {
 	if e != nil {
 		t.Fatalf("expected %#v to be marshalable into json: %v", err, e)
 	}
-	var s JSONStack
+	var s errorstest.StackTrace
 	e = json.Unmarshal(jsonData, &s)
 	if e != nil {
 		t.Fatalf("failed to unmarshal json: %v", e)
 	}
 
-	assertStackRegexp(t, s, JSONStack{
+	assertStackRegexp(t, s, errorstest.StackTrace{
 		{
 			Function: "github.com/muonsoft/errors_test.TestStackTrace_MarshalJSON",
 			File:     ".+/errors/stack_test.go",
-			Line:     244,
+			Line:     245,
 		},
 	})
 }

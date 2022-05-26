@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/muonsoft/errors"
+	"github.com/muonsoft/errors/errorstest"
 )
 
 var (
@@ -75,29 +75,6 @@ func (repository *ProductRepository) FindByID(ctx context.Context, id int) (*Pro
 	return &product, nil
 }
 
-type Logger struct {
-	fields  map[string]interface{}
-	trace   errors.StackTrace
-	message string
-}
-
-func NewLogger() *Logger {
-	return &Logger{fields: make(map[string]interface{})}
-}
-
-func (m *Logger) SetBool(key string, value bool)              { m.fields[key] = value }
-func (m *Logger) SetInt(key string, value int)                { m.fields[key] = value }
-func (m *Logger) SetUint(key string, value uint)              { m.fields[key] = value }
-func (m *Logger) SetFloat(key string, value float64)          { m.fields[key] = value }
-func (m *Logger) SetString(key string, value string)          { m.fields[key] = value }
-func (m *Logger) SetStrings(key string, values []string)      { m.fields[key] = values }
-func (m *Logger) SetValue(key string, value interface{})      { m.fields[key] = value }
-func (m *Logger) SetTime(key string, value time.Time)         { m.fields[key] = value }
-func (m *Logger) SetDuration(key string, value time.Duration) { m.fields[key] = value }
-func (m *Logger) SetJSON(key string, value json.RawMessage)   { m.fields[key] = value }
-func (m *Logger) SetStackTrace(trace errors.StackTrace)       { m.trace = trace }
-func (m *Logger) Log(message string)                          { m.message = message }
-
 type ErrorJSON struct {
 	Error      string                `json:"error"`
 	StackTrace []StackTraceFrameJSON `json:"stackTrace"`
@@ -148,14 +125,14 @@ func ExampleLog_typicalErrorHandling() {
 		fmt.Println(`repository error as JSON, field "stackTrace[0].line":`, jsonError.StackTrace[0].Line)
 
 		// Log error with structured logger.
-		logger := NewLogger()
+		logger := errorstest.NewLogger()
 		errors.Log(notFoundError, logger)
-		fmt.Println(`log repository error, message:`, logger.message)
+		fmt.Println(`log repository error, message:`, logger.Message)
 		fmt.Printf(
 			"log repository error, first line of stack trace: %s %s:%d\n",
-			logger.trace[0].Name(),
-			logger.trace[0].File()[strings.LastIndex(logger.trace[0].File(), "/")+1:],
-			logger.trace[0].Line(),
+			logger.StackTrace[0].Name(),
+			logger.StackTrace[0].File()[strings.LastIndex(logger.StackTrace[0].File(), "/")+1:],
+			logger.StackTrace[0].Line(),
 		)
 	}
 
@@ -179,15 +156,15 @@ func ExampleLog_typicalErrorHandling() {
 		fmt.Println(`repository error as JSON, field "stackTrace[0].line":`, jsonError.StackTrace[0].Line)
 
 		// Log error with structured logger.
-		logger := NewLogger()
+		logger := errorstest.NewLogger()
 		errors.Log(sqlError, logger)
-		fmt.Println(`log repository error, message:`, logger.message)
-		fmt.Println(`log repository error, fields:`, logger.fields)
+		fmt.Println(`log repository error, message:`, logger.Message)
+		fmt.Println(`log repository error, fields:`, logger.Fields)
 		fmt.Printf(
 			"log repository error, first line of stack trace: %s %s:%d\n",
-			logger.trace[0].Name(),
-			logger.trace[0].File()[strings.LastIndex(logger.trace[0].File(), "/")+1:],
-			logger.trace[0].Line(),
+			logger.StackTrace[0].Name(),
+			logger.StackTrace[0].File()[strings.LastIndex(logger.StackTrace[0].File(), "/")+1:],
+			logger.StackTrace[0].Line(),
 		)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/muonsoft/errors"
+	"github.com/muonsoft/errors/errorstest"
 )
 
 func TestStackedError_MarshalJSON(t *testing.T) {
@@ -22,11 +23,11 @@ func TestStackedError_MarshalJSON(t *testing.T) {
 	if jsonError.Error != "ooh" {
 		t.Errorf("expected %#v to have error key", err)
 	}
-	assertStackRegexp(t, jsonError.StackTrace, JSONStack{
+	assertStackRegexp(t, jsonError.StackTrace, errorstest.StackTrace{
 		{
 			Function: "github.com/muonsoft/errors_test.TestStackedError_MarshalJSON",
 			File:     ".+/errors/json_test.go",
-			Line:     11,
+			Line:     12,
 		},
 	})
 	if jsonError.Key != "value" {
@@ -52,11 +53,11 @@ func TestWrappedError_MarshalJSON(t *testing.T) {
 	if jsonError.Error != "ooh" {
 		t.Errorf("expected %#v to have error key", err)
 	}
-	assertStackRegexp(t, jsonError.StackTrace, JSONStack{
+	assertStackRegexp(t, jsonError.StackTrace, errorstest.StackTrace{
 		{
 			Function: "github.com/muonsoft/errors_test.TestWrappedError_MarshalJSON",
 			File:     ".+/errors/json_test.go",
-			Line:     39,
+			Line:     40,
 		},
 	})
 	if jsonError.Key != "value" {
@@ -68,16 +69,8 @@ func TestWrappedError_MarshalJSON(t *testing.T) {
 }
 
 type JSONError struct {
-	Error      string    `json:"error"`
-	StackTrace JSONStack `json:"stackTrace"`
-	Key        string    `json:"key"`
-	DeepKey    string    `json:"deepKey"`
-}
-
-type JSONStack []JSONFrame
-
-type JSONFrame struct {
-	Function string `json:"function"`
-	File     string `json:"file"`
-	Line     int    `json:"line"`
+	Error      string                `json:"error"`
+	StackTrace errorstest.StackTrace `json:"stackTrace"`
+	Key        string                `json:"key"`
+	DeepKey    string                `json:"deepKey"`
 }
