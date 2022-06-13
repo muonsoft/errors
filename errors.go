@@ -6,13 +6,13 @@
 //
 // This package is based on well known github.com/pkg/errors. Key differences and features:
 //
-// - errors.New() is an alias to standard library and (it does not add a stack trace) and
-//   should be used to create sentinel package-level errors;
-// - minimalistic API: few methods to wrap an error: errors.Errorf(), errors.Wrap();
-// - adds stack trace idempotently (only once in a chain);
-// - options to skip caller in a stack trace and to add error fields for structured logging;
-// - error fields are made for the statically typed logger interface;
-// - package errors can be easily marshaled into JSON with all fields in a chain.
+//   - errors.New() is an alias to standard library and (it does not add a stack trace) and
+//     should be used to create sentinel package-level errors;
+//   - minimalistic API: few methods to wrap an error: errors.Errorf(), errors.Wrap();
+//   - adds stack trace idempotently (only once in a chain);
+//   - options to skip caller in a stack trace and to add error fields for structured logging;
+//   - error fields are made for the statically typed logger interface;
+//   - package errors can be easily marshaled into JSON with all fields in a chain.
 package errors
 
 import (
