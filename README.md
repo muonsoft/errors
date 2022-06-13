@@ -1,5 +1,14 @@
 # errors
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/muonsoft/errors.svg)](https://pkg.go.dev/github.com/muonsoft/errors)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/muonsoft/errors)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/muonsoft/errors)
+![GitHub](https://img.shields.io/github/license/muonsoft/errors)
+[![tests](https://github.com/muonsoft/errors/actions/workflows/tests.yml/badge.svg)](https://github.com/muonsoft/errors/actions/workflows/tests.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/muonsoft/errors)](https://goreportcard.com/report/github.com/muonsoft/errors)
+[![Maintainability](https://api.codeclimate.com/v1/badges/fe1720426006f3af30b0/maintainability)](https://codeclimate.com/github/muonsoft/errors/maintainability)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
+
 Errors package for structured logging. Adds stack trace without a pain
 (no confuse with `Wrap`/`WithMessage` methods).
 
@@ -179,35 +188,10 @@ Output
 
 ### Structured logging
 
-To use structured logging you have to create an adapter for your logging system that implements 
-`errors.Logger` interface.
+To use structured logging, you need to use an adapter for your logging system. It can be one of the 
+built-in adapters from the `logging` directory, or you can implement your own adapter using `errors.Logger` interface.
 
-Example of an adapter for logrus.
-
-```golang
-func Log(err error, logger logrus.FieldLogger) {
-	errors.Log(err, &adapter{l: logger})
-}
-
-type adapter struct {
-	l logrus.FieldLogger
-}
-
-func (a *adapter) Log(message string)                          { a.l.Error(message) }
-func (a *adapter) SetBool(key string, value bool)              { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetInt(key string, value int)                { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetUint(key string, value uint)              { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetFloat(key string, value float64)          { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetString(key string, value string)          { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetStrings(key string, values []string)      { a.l = a.l.WithField(key, values) }
-func (a *adapter) SetValue(key string, value interface{})      { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetTime(key string, value time.Time)         { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetDuration(key string, value time.Duration) { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetJSON(key string, value json.RawMessage)   { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetStackTrace(trace errors.StackTrace)       { a.l = a.l.WithField("stackTrace", trace) }
-```
-
-Code example
+Example of using an adapter for [Logrus](https://github.com/sirupsen/logrus).
 
 ```golang
 err := errors.Errorf(
@@ -228,3 +212,17 @@ Output
 ```
 ERRO[0000] find product: sql error: sql: no rows in result set  productID=123 requestID=24874020-cab7-4ef3-bac5-76858832f8b0 sql="SELECT id, name FROM product WHERE id = ?" stackTrace="[scratch.go:12 proc.go:250 asm_amd64.s:1571]"
 ```
+
+## Contributing
+
+You may help this project by
+
+* reporting an [issue](https://github.com/muonsoft/errors/issues);
+* making translations for error messages;
+* suggest an improvement or [discuss](https://github.com/muonsoft/errors/discussions) the usability of the package.
+
+If you'd like to contribute, see [the contribution guide](CONTRIBUTING.md). Pull requests are welcome.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
