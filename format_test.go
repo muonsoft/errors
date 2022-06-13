@@ -51,13 +51,19 @@ func TestFormat_Errorf(t *testing.T) {
 				"\t.+/errors/format_test.go:47",
 		},
 		{
+			"%v for recursively wrapped error",
+			errors.Errorf("wrapped: %w", errors.Errorf("wrapped: %w", errors.New("error"))),
+			"%v",
+			"wrapped: wrapped: error",
+		},
+		{
 			"%+v for error with fields",
 			errors.Errorf("%s", "error", errors.String("key", "value")),
 			"%+v",
 			"error\n" +
 				"key: value\n" +
 				"github.com/muonsoft/errors_test.TestFormat_Errorf\n" +
-				"\t.+/errors/format_test.go:55",
+				"\t.+/errors/format_test.go:61",
 		},
 		{
 			"%+v for wrapped error with fields",
@@ -71,7 +77,7 @@ func TestFormat_Errorf(t *testing.T) {
 				"wrappedKey: wrappedValue\n" +
 				"key: value\n" +
 				"github.com/muonsoft/errors_test.TestFormat_Errorf\n" +
-				"\t.+/errors/format_test.go:66",
+				"\t.+/errors/format_test.go:72",
 		},
 		{
 			"%+v for error with bool true field",

@@ -87,3 +87,144 @@ if err != nil {
 	)
 }
 ```
+
+### Printing error with stack trace
+
+You can use formatting with `%+v` modifier to print errors with message, fields for logging and a stack trace.
+
+Example
+
+```golang
+func main() {
+	err := errors.Errorf(
+		"sql error: %w", sql.ErrNoRows,
+		errors.String("sql", "SELECT id, name FROM product WHERE id = ?"),
+		errors.Int("productID", 123),
+	)
+	err = errors.Errorf(
+		"find product: %w", err,
+		errors.String("requestID", "24874020-cab7-4ef3-bac5-76858832f8b0"),
+	)
+	fmt.Printf("%+v", err)
+}
+```
+
+Output
+
+```
+find product: sql error: sql: no rows in result set
+requestID: 24874020-cab7-4ef3-bac5-76858832f8b0
+sql: SELECT id, name FROM product WHERE id = ?
+productID: 123
+main.main
+    /home/user/project/main.go:11
+runtime.main
+    /usr/local/go/src/runtime/proc.go:250
+runtime.goexit
+    /usr/local/go/src/runtime/asm_amd64.s:1571
+```
+
+### Marshal error into JSON
+
+Wrapped errors implements `json.Marshaler` interface. So you can easily marshal errors into JSON.
+
+Example
+
+```golang
+func main() {
+	err := errors.Errorf(
+		"sql error: %w", sql.ErrNoRows,
+		errors.String("sql", "SELECT id, name FROM product WHERE id = ?"),
+		errors.Int("productID", 123),
+	)
+	err = errors.Errorf(
+		"find product: %w", err,
+		errors.String("requestID", "24874020-cab7-4ef3-bac5-76858832f8b0"),
+	)
+	errJSON, err := json.MarshalIndent(err, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(errJSON))
+}
+```
+
+Output
+
+```json
+{
+    "error": "find product: sql error: sql: no rows in result set",
+    "productID": 123,
+    "requestID": "24874020-cab7-4ef3-bac5-76858832f8b0",
+    "sql": "SELECT id, name FROM product WHERE id = ?",
+    "stackTrace": [
+        {
+            "function": "main.main",
+            "file": "/home/user/project/main.go",
+            "line": 13
+        },
+        {
+            "function": "runtime.main",
+            "file": "/usr/local/go/src/runtime/proc.go",
+            "line": 250
+        },
+        {
+            "function": "runtime.goexit",
+            "file": "/usr/local/go/src/runtime/asm_amd64.s",
+            "line": 1571
+        }
+    ]
+}
+```
+
+### Structured logging
+
+To use structured logging you have to create an adapter for your logging system that implements 
+`errors.Logger` interface.
+
+Example of an adapter for logrus.
+
+```golang
+func Log(err error, logger logrus.FieldLogger) {
+	errors.Log(err, &adapter{l: logger})
+}
+
+type adapter struct {
+	l logrus.FieldLogger
+}
+
+func (a *adapter) Log(message string)                          { a.l.Error(message) }
+func (a *adapter) SetBool(key string, value bool)              { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetInt(key string, value int)                { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetUint(key string, value uint)              { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetFloat(key string, value float64)          { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetString(key string, value string)          { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetStrings(key string, values []string)      { a.l = a.l.WithField(key, values) }
+func (a *adapter) SetValue(key string, value interface{})      { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetTime(key string, value time.Time)         { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetDuration(key string, value time.Duration) { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetJSON(key string, value json.RawMessage)   { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetStackTrace(trace errors.StackTrace)       { a.l = a.l.WithField("stackTrace", trace) }
+```
+
+Code example
+
+```golang
+err := errors.Errorf(
+	"sql error: %w", sql.ErrNoRows,
+	errors.String("sql", "SELECT id, name FROM product WHERE id = ?"),
+	errors.Int("productID", 123),
+)
+err = errors.Errorf(
+	"find product: %w", err,
+	errors.String("requestID", "24874020-cab7-4ef3-bac5-76858832f8b0"),
+)
+logger := logrus.New()
+logrusadapter.Log(err, logger)
+```
+
+Output
+
+```
+ERRO[0000] find product: sql error: sql: no rows in result set  productID=123 requestID=24874020-cab7-4ef3-bac5-76858832f8b0 sql="SELECT id, name FROM product WHERE id = ?" stackTrace="[scratch.go:12 proc.go:250 asm_amd64.s:1571]"
+```

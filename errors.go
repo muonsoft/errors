@@ -1,3 +1,18 @@
+// Copyright 2022 Igor Lazarev. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+// Package errors for structured logging.
+//
+// This package is based on well known github.com/pkg/errors. Key differences and features:
+//
+// - errors.New() is an alias to standard library and (it does not add a stack trace) and
+//   should be used to create sentinel package-level errors;
+// - minimalistic API: few methods to wrap an error: errors.Errorf(), errors.Wrap();
+// - adds stack trace idempotently (only once in a chain);
+// - options to skip caller in a stack trace and to add error fields for structured logging;
+// - error fields are made for the statically typed logger interface;
+// - package errors can be easily marshaled into JSON with all fields in a chain.
 package errors
 
 import (
@@ -139,8 +154,8 @@ func (e *wrapped) LogFields(logger FieldLogger) {
 func (e *wrapped) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
+		io.WriteString(s, e.Error())
 		if s.Flag('+') {
-			io.WriteString(s, e.Error())
 			fieldsWriter := &stringWriter{writer: s}
 			var err error
 			for err = e; err != nil; err = Unwrap(err) {
@@ -152,7 +167,6 @@ func (e *wrapped) Format(s fmt.State, verb rune) {
 				}
 			}
 		}
-		return
 	case 's', 'q':
 		io.WriteString(s, e.Error())
 	}
