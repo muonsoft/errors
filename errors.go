@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 )
 
@@ -80,7 +81,7 @@ func Errorf(message string, argsAndOptions ...interface{}) error {
 
 	return &stacked{
 		wrapped: &wrapped{wrapped: err, fields: opts.fields},
-		stack:   callers(opts.skipCallers),
+		stack:   newStack(opts.skipCallers),
 	}
 }
 
@@ -101,7 +102,7 @@ func Wrap(err error, options ...Option) error {
 
 	return &stacked{
 		wrapped: &wrapped{wrapped: err, fields: opts.fields},
-		stack:   callers(opts.skipCallers),
+		stack:   newStack(opts.skipCallers),
 	}
 }
 
@@ -135,16 +136,38 @@ func (e *wrapped) LogFields(logger FieldLogger) {
 	}
 }
 
+func (e *wrapped) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			io.WriteString(s, e.Error())
+			fieldsWriter := &stringWriter{writer: s}
+			var err error
+			for err = e; err != nil; err = Unwrap(err) {
+				if loggable, ok := err.(LoggableError); ok {
+					loggable.LogFields(fieldsWriter)
+				}
+				if tracer, ok := err.(stackTracer); ok {
+					tracer.StackTrace().Format(s, verb)
+				}
+			}
+		}
+		return
+	case 's', 'q':
+		io.WriteString(s, e.Error())
+	}
+}
+
 func (e *wrapped) MarshalJSON() ([]byte, error) {
 	data := mapWriter{"error": e.Error()}
 
 	var err error
 	for err = e; err != nil; err = Unwrap(err) {
-		if w, ok := err.(LoggableError); ok {
-			w.LogFields(data)
+		if loggable, ok := err.(LoggableError); ok {
+			loggable.LogFields(data)
 		}
-		if s, ok := err.(stackTracer); ok {
-			data.SetStackTrace(s.StackTrace())
+		if tracer, ok := err.(stackTracer); ok {
+			data.SetStackTrace(tracer.StackTrace())
 		}
 	}
 
@@ -161,6 +184,7 @@ func (e *stacked) Format(s fmt.State, verb rune) {
 	case 'v':
 		if s.Flag('+') {
 			io.WriteString(s, e.wrapped.Error())
+			e.wrapped.LogFields(&stringWriter{writer: s})
 			e.stack.Format(s, verb)
 			return
 		}
@@ -245,3 +269,59 @@ func (m mapWriter) SetTime(key string, value time.Time)         { m[key] = value
 func (m mapWriter) SetDuration(key string, value time.Duration) { m[key] = value }
 func (m mapWriter) SetJSON(key string, value json.RawMessage)   { m[key] = value }
 func (m mapWriter) SetStackTrace(trace StackTrace)              { m["stackTrace"] = trace }
+
+type stringWriter struct {
+	writer io.Writer
+}
+
+func (s *stringWriter) SetBool(key string, value bool) {
+	if value {
+		io.WriteString(s.writer, "\n"+key+": true")
+	} else {
+		io.WriteString(s.writer, "\n"+key+": false")
+	}
+}
+
+func (s *stringWriter) SetInt(key string, value int) {
+	io.WriteString(s.writer, "\n"+key+": "+strconv.Itoa(value))
+}
+
+func (s *stringWriter) SetUint(key string, value uint) {
+	io.WriteString(s.writer, "\n"+key+": "+strconv.FormatUint(uint64(value), 10))
+}
+
+func (s *stringWriter) SetFloat(key string, value float64) {
+	io.WriteString(s.writer, "\n"+key+": "+fmt.Sprintf("%f", value))
+}
+
+func (s *stringWriter) SetString(key string, value string) {
+	io.WriteString(s.writer, "\n"+key+": "+value)
+}
+
+func (s *stringWriter) SetStrings(key string, values []string) {
+	io.WriteString(s.writer, "\n"+key+": ")
+	for i, value := range values {
+		if i > 0 {
+			io.WriteString(s.writer, ", ")
+		}
+		io.WriteString(s.writer, value)
+	}
+}
+
+func (s *stringWriter) SetValue(key string, value interface{}) {
+	io.WriteString(s.writer, "\n"+key+": "+fmt.Sprintf("%v", value))
+}
+
+func (s *stringWriter) SetTime(key string, value time.Time) {
+	io.WriteString(s.writer, "\n"+key+": "+value.String())
+}
+
+func (s *stringWriter) SetDuration(key string, value time.Duration) {
+	io.WriteString(s.writer, "\n"+key+": "+value.String())
+}
+
+func (s *stringWriter) SetJSON(key string, value json.RawMessage) {
+	io.WriteString(s.writer, "\n"+key+": "+string(value))
+}
+
+func (s *stringWriter) SetStackTrace(trace StackTrace) {}

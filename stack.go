@@ -229,7 +229,9 @@ func (s *stack) StackTrace() StackTrace {
 	return f
 }
 
-func callers(skip int) *stack {
+// newStack creates a stack of program counters pointing to the place it was called.
+// The argument skip is the number of stack frames to skip before stack trace.
+func newStack(skip int) *stack {
 	const depth = 32
 	var pcs [depth]uintptr
 	n := runtime.Callers(3+skip, pcs[:])

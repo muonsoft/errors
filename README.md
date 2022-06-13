@@ -10,11 +10,11 @@ Key differences and features:
 
 * `errors.New()` is an alias to standard library and (it does not add a stack trace)
   and should be used to create sentinel package-level errors;
-* few methods to create or wrap an error: `errors.Errorf()`, `errors.Wrap()`;
+* minimalistic API: few methods to wrap an error: `errors.Errorf()`, `errors.Wrap()`;
 * adds stack trace idempotently (only once in a chain);
 * options to skip caller in a stack trace and to add error fields for structured logging;
 * error fields are made for the statically typed logger interface;
-* package errors can be easily marshaled into JSON with all fields.
+* package errors can be easily marshaled into JSON with all fields in a chain.
 
 ## Installation
 
@@ -76,13 +76,14 @@ If err is nil, Wrap returns nil.  Also, you can pass an options to set a structu
 in a stack trace.
 
 ```golang
-data, err := service.Handle(ctx, userID)
+data, err := service.Handle(ctx, userID, message)
 if err != nil {
 	// Adds a stack trace to the line that was called (if there is no stack trace in the chain already)
 	// and adds fields for structured logging.
 	return nil, errors.Wrap(
 		err,
 		errors.Int("userID", userID),
+		errors.String("userMessage", message),
 	)
 }
 ```
