@@ -21,6 +21,7 @@ Key differences and features:
   and should be used to create sentinel package-level errors;
 * minimalistic API: few methods to wrap an error: `errors.Errorf()`, `errors.Wrap()`;
 * adds stack trace idempotently (only once in a chain);
+* `errors.As()` method is based on typed parameters (aka generics);
 * options to skip caller in a stack trace and to add error fields for structured logging;
 * error fields are made for the statically typed logger interface;
 * package errors can be easily marshaled into JSON with all fields in a chain.
@@ -210,7 +211,7 @@ logrusadapter.Log(err, logger)
 Output
 
 ```
-ERRO[0000] find product: sql error: sql: no rows in result set  productID=123 requestID=24874020-cab7-4ef3-bac5-76858832f8b0 sql="SELECT id, name FROM product WHERE id = ?" stackTrace="[scratch.go:12 proc.go:250 asm_amd64.s:1571]"
+ERRO[0000] find product: sql error: sql: no rows in result set  productID=123 requestID=24874020-cab7-4ef3-bac5-76858832f8b0 sql="SELECT id, name FROM product WHERE id = ?" stackTrace="[{main.main /home/strider/projects/errors/var/scratch.go 12} {runtime.main /usr/local/go/src/runtime/proc.go 250} {runtime.goexit /usr/local/go/src/runtime/asm_amd64.s 1571}]"
 ```
 
 ## Contributing

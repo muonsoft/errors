@@ -27,4 +27,20 @@ func (a *adapter) SetValue(key string, value interface{})      { a.l = a.l.WithF
 func (a *adapter) SetTime(key string, value time.Time)         { a.l = a.l.WithField(key, value) }
 func (a *adapter) SetDuration(key string, value time.Duration) { a.l = a.l.WithField(key, value) }
 func (a *adapter) SetJSON(key string, value json.RawMessage)   { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetStackTrace(trace errors.StackTrace)       { a.l = a.l.WithField("stackTrace", trace) }
+
+func (a *adapter) SetStackTrace(trace errors.StackTrace) {
+	type Frame struct {
+		Function string `json:"function"`
+		File     string `json:"file,omitempty"`
+		Line     int    `json:"line,omitempty"`
+	}
+
+	frames := make([]Frame, len(trace))
+	for i, frame := range trace {
+		frames[i].File = frame.File()
+		frames[i].Function = frame.Name()
+		frames[i].Line = frame.Line()
+	}
+
+	a.l = a.l.WithField("stackTrace", frames)
+}

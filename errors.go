@@ -46,26 +46,34 @@ func Is(err, target error) bool {
 	return errors.Is(err, target)
 }
 
-// As finds the first error in err's chain that matches target, and if one is found, sets
-// target to that error value and returns true. Otherwise, it returns false.
+// As finds the first error in err's chain that matches type T, and if one is found, returns
+// its value and true. Otherwise, it returns zero value and false.
 //
 // The chain consists of err itself followed by the sequence of errors obtained by
 // repeatedly calling Unwrap.
 //
-// An error matches target if the error's concrete value is assignable to the value
-// pointed to by target, or if the error has a method As(interface{}) bool such that
-// As(target) returns true. In the latter case, the As method is responsible for
-// setting target.
+// An error matches target if the error's concrete value is of type T, or if the error
+// has a method As(any) bool such that As(target) returns true. In the latter case,
+// the As method is responsible for setting returned value.
 //
 // An error type might provide an As method so it can be treated as if it were a
 // different error type.
-//
-// As panics if target is not a non-nil pointer to either a type that implements
-// error, or to any interface type.
-//
-// This function is an alias to standard errors.As.
-func As(err error, target interface{}) bool {
-	return errors.As(err, target)
+func As[T any](err error) (T, bool) {
+	for err != nil {
+		if t, ok := err.(T); ok {
+			return t, true
+		}
+		if x, ok := err.(interface{ As(any) bool }); ok {
+			var t T
+			if x.As(&t) {
+				return t, true
+			}
+		}
+		err = Unwrap(err)
+	}
+
+	var z T
+	return z, false
 }
 
 // Unwrap returns the result of calling the Unwrap method on err, if err's
@@ -130,9 +138,9 @@ func isWrapper(err error) bool {
 		return false
 	}
 
-	var w wrapper
+	_, ok := As[wrapper](err)
 
-	return errors.As(err, &w)
+	return ok
 }
 
 type wrapped struct {

@@ -3,6 +3,8 @@ package errors_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"os"
 	"testing"
 	"time"
 
@@ -21,7 +23,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:21",
+					"\t.+/errors/errors_test.go:23",
 			},
 		},
 		{
@@ -29,7 +31,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Errorf("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:29",
+					"\t.+/errors/errors_test.go:31",
 			},
 		},
 		{
@@ -37,7 +39,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:37",
+					"\t.+/errors/errors_test.go:39",
 			},
 		},
 		{
@@ -45,7 +47,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:45",
+					"\t.+/errors/errors_test.go:47",
 			},
 		},
 		{
@@ -53,7 +55,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:53",
+					"\t.+/errors/errors_test.go:55",
 			},
 		},
 		{
@@ -61,7 +63,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:61",
+					"\t.+/errors/errors_test.go:63",
 			},
 		},
 		{
@@ -69,7 +71,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:69",
+					"\t.+/errors/errors_test.go:71",
 			},
 		},
 		{
@@ -77,7 +79,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%%w %v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:77",
+					"\t.+/errors/errors_test.go:79",
 			},
 		},
 		{
@@ -85,7 +87,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%s: %w", "prefix", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:85",
+					"\t.+/errors/errors_test.go:87",
 			},
 		},
 		{
@@ -93,7 +95,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:93",
+					"\t.+/errors/errors_test.go:95",
 			},
 		},
 		{
@@ -101,7 +103,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", fmt.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:101",
+					"\t.+/errors/errors_test.go:103",
 			},
 		},
 		{
@@ -109,9 +111,9 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:150",
+					"\t.+/errors/errors_test.go:152",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:109",
+					"\t.+/errors/errors_test.go:111",
 			},
 		},
 		{
@@ -119,7 +121,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCaller(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:119",
+					"\t.+/errors/errors_test.go:121",
 			},
 		},
 		{
@@ -127,15 +129,15 @@ func TestStackTrace(t *testing.T) {
 			err:  errorfSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:127",
+					"\t.+/errors/errors_test.go:129",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			assertSingleStack(t, test.err)
-			var stacked StackTracer
-			if !errors.As(test.err, &stacked) {
+			stacked, ok := errors.As[StackTracer](test.err)
+			if !ok {
 				t.Fatalf("expected %#v to implement errors.StackTracer", test.err)
 			}
 			st := stacked.StackTrace()
@@ -240,12 +242,12 @@ func TestFields(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var err errors.LoggableError
-			if !errors.As(test.err, &err) {
+			loggable, ok := errors.As[errors.LoggableError](test.err)
+			if !ok {
 				t.Fatalf("expected %#v to implement errors.LoggableError", test.err)
 			}
 			logger := errorstest.NewLogger()
-			err.LogFields(logger)
+			loggable.LogFields(logger)
 			logger.AssertField(t, "key", test.expected)
 		})
 	}
@@ -267,3 +269,167 @@ func TestIs(t *testing.T) {
 		t.Error("want errors is true")
 	}
 }
+
+func TestAs(t *testing.T) {
+	type timeout interface{ Timeout() bool }
+	_, errFileNotFound := os.Open("non-existing")
+	poserErr := &poser{"oh no", nil}
+
+	tests := []struct {
+		name  string
+		err   error
+		as    func(err error) (any, bool)
+		match bool
+		want  any // value of target on match
+	}{
+		{
+			"nil",
+			nil,
+			func(err error) (any, bool) {
+				return errors.As[*fs.PathError](err)
+			},
+			false,
+			nil,
+		},
+		{
+			"wrapped error",
+			wrapped{"pitied the fool", errorT{"T"}},
+			func(err error) (any, bool) {
+				return errors.As[errorT](err)
+			},
+			true,
+			errorT{"T"},
+		},
+		{
+			"match path error",
+			errFileNotFound,
+			func(err error) (any, bool) {
+				return errors.As[*fs.PathError](err)
+			},
+			true,
+			errFileNotFound,
+		},
+		{
+			"not match path error",
+			errorT{},
+			func(err error) (any, bool) {
+				return errors.As[*fs.PathError](err)
+			},
+			false,
+			nil,
+		},
+		{
+			"wrapped nil",
+			wrapped{"wrapped", nil},
+			func(err error) (any, bool) {
+				return errors.As[errorT](err)
+			},
+			false,
+			nil,
+		},
+		{
+			"error with matching as method",
+			&poser{"error", nil},
+			func(err error) (any, bool) {
+				return errors.As[errorT](err)
+			},
+			true,
+			errorT{"poser"},
+		},
+		{
+			"error with matching as method",
+			&poser{"path", nil},
+			func(err error) (any, bool) {
+				return errors.As[*fs.PathError](err)
+			},
+			true,
+			poserPathErr,
+		},
+		{
+			"error with matching as method",
+			poserErr,
+			func(err error) (any, bool) {
+				return errors.As[*poser](err)
+			},
+			true,
+			poserErr,
+		},
+		{
+			"timeout error",
+			errors.New("err"),
+			func(err error) (any, bool) {
+				return errors.As[timeout](err)
+			},
+			false,
+			nil,
+		},
+		{
+			"file not found as timeout",
+			errFileNotFound,
+			func(err error) (any, bool) {
+				return errors.As[timeout](err)
+			},
+			true,
+			errFileNotFound,
+		},
+		{
+			"wrapped file not found as timeout",
+			wrapped{"path error", errFileNotFound},
+			func(err error) (any, bool) {
+				return errors.As[timeout](err)
+			},
+			true,
+			errFileNotFound,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, match := test.as(test.err)
+			if match != test.match {
+				t.Fatalf("match: got %v; want %v", match, test.match)
+			}
+			if !match {
+				return
+			}
+			if got != test.want {
+				t.Fatalf("got %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+type poser struct {
+	msg string
+	f   func(error) bool
+}
+
+var poserPathErr = &fs.PathError{Op: "poser"}
+
+func (p *poser) Error() string     { return p.msg }
+func (p *poser) Is(err error) bool { return p.f(err) }
+func (p *poser) As(err any) bool {
+	switch x := err.(type) {
+	case **poser:
+		*x = p
+	case *errorT:
+		*x = errorT{"poser"}
+	case **fs.PathError:
+		*x = poserPathErr
+	default:
+		return false
+	}
+	return true
+}
+
+type errorT struct{ s string }
+
+func (e errorT) Error() string { return fmt.Sprintf("errorT(%s)", e.s) }
+
+type wrapped struct {
+	msg string
+	err error
+}
+
+func (e wrapped) Error() string { return e.msg }
+
+func (e wrapped) Unwrap() error { return e.err }

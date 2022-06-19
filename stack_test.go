@@ -217,8 +217,8 @@ func caller() errors.Frame {
 
 func TestStackTrace_String(t *testing.T) {
 	err := errors.Errorf("ooh")
-	var stacked StackTracer
-	if !errors.As(err, &stacked) {
+	stacked, ok := errors.As[StackTracer](err)
+	if !ok {
 		t.Fatalf("expected %#v to implement errors.StackTracer", err)
 	}
 	s := stacked.StackTrace().String()
@@ -230,8 +230,8 @@ func TestStackTrace_String(t *testing.T) {
 
 func TestStackTrace_Strings(t *testing.T) {
 	err := errors.Errorf("ooh")
-	var stacked StackTracer
-	if !errors.As(err, &stacked) {
+	stacked, ok := errors.As[StackTracer](err)
+	if !ok {
 		t.Fatalf("expected %#v to implement errors.StackTracer", err)
 	}
 	s := stacked.StackTrace().Strings()
@@ -243,8 +243,8 @@ func TestStackTrace_Strings(t *testing.T) {
 
 func TestStackTrace_MarshalJSON(t *testing.T) {
 	err := errors.Errorf("ooh")
-	var stacked StackTracer
-	if !errors.As(err, &stacked) {
+	stacked, ok := errors.As[StackTracer](err)
+	if !ok {
 		t.Fatalf("expected %#v to implement errors.StackTracer", err)
 	}
 	st := stacked.StackTrace()
