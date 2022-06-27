@@ -76,6 +76,15 @@ func As[T any](err error) (T, bool) {
 	return z, false
 }
 
+// IsOfType finds the first error in err's chain that matches type T, and if one is found, returns
+// true. Otherwise, it returns false.
+//
+// It works exactly as As function, but returns only boolean flag.
+func IsOfType[T any](err error) bool {
+	_, is := As[T](err)
+	return is
+}
+
 // Unwrap returns the result of calling the Unwrap method on err, if err's
 // type contains an Unwrap method returning error.
 // Otherwise, Unwrap returns nil.

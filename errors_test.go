@@ -111,7 +111,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:152",
+					"\t.+/errors/errors_test.go:160",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
 					"\t.+/errors/errors_test.go:111",
 			},
@@ -125,11 +125,19 @@ func TestStackTrace(t *testing.T) {
 			},
 		},
 		{
+			name: `wrap skip callers`,
+			err:  wrapSkipCallers(errors.New("ooh")),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:129",
+			},
+		},
+		{
 			name: `errorf skip caller`,
 			err:  errorfSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:129",
+					"\t.+/errors/errors_test.go:137",
 			},
 		},
 	}
@@ -154,6 +162,10 @@ func wrap(err error) error {
 
 func wrapSkipCaller(err error) error {
 	return errors.Wrap(err, errors.SkipCaller())
+}
+
+func wrapSkipCallers(err error) error {
+	return errors.Wrap(err, errors.SkipCallers(1))
 }
 
 func errorfSkipCaller(message string) error {
@@ -270,8 +282,9 @@ func TestIs(t *testing.T) {
 	}
 }
 
+type timeout interface{ Timeout() bool }
+
 func TestAs(t *testing.T) {
-	type timeout interface{ Timeout() bool }
 	_, errFileNotFound := os.Open("non-existing")
 	poserErr := &poser{"oh no", nil}
 
@@ -393,6 +406,115 @@ func TestAs(t *testing.T) {
 			}
 			if got != test.want {
 				t.Fatalf("got %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestIsOfType(t *testing.T) {
+	_, errFileNotFound := os.Open("non-existing")
+	poserErr := &poser{"oh no", nil}
+
+	tests := []struct {
+		name  string
+		err   error
+		is    func(err error) bool
+		match bool
+	}{
+		{
+			"nil",
+			nil,
+			func(err error) bool {
+				return errors.IsOfType[*os.PathError](err)
+			},
+			false,
+		},
+		{
+			"wrapped error",
+			wrapped{"pitied the fool", errorT{"T"}},
+			func(err error) bool {
+				return errors.IsOfType[errorT](err)
+			},
+			true,
+		},
+		{
+			"match path error",
+			errFileNotFound,
+			func(err error) bool {
+				return errors.IsOfType[*fs.PathError](err)
+			},
+			true,
+		},
+		{
+			"not match path error",
+			errorT{},
+			func(err error) bool {
+				return errors.IsOfType[*fs.PathError](err)
+			},
+			false,
+		},
+		{
+			"wrapped nil",
+			wrapped{"wrapped", nil},
+			func(err error) bool {
+				return errors.IsOfType[errorT](err)
+			},
+			false,
+		},
+		{
+			"error with matching as method",
+			&poser{"error", nil},
+			func(err error) bool {
+				return errors.IsOfType[errorT](err)
+			},
+			true,
+		},
+		{
+			"error with matching as method",
+			&poser{"path", nil},
+			func(err error) bool {
+				return errors.IsOfType[*fs.PathError](err)
+			},
+			true,
+		},
+		{
+			"error with matching as method",
+			poserErr,
+			func(err error) bool {
+				return errors.IsOfType[*poser](err)
+			},
+			true,
+		},
+		{
+			"timeout error",
+			errors.New("err"),
+			func(err error) bool {
+				return errors.IsOfType[timeout](err)
+			},
+			false,
+		},
+		{
+			"file not found as timeout",
+			errFileNotFound,
+			func(err error) bool {
+				return errors.IsOfType[timeout](err)
+			},
+			true,
+		},
+		{
+			"wrapped file not found as timeout",
+			wrapped{"path error", errFileNotFound},
+			func(err error) bool {
+				return errors.IsOfType[timeout](err)
+			},
+			true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			match := test.is(test.err)
+			if match != test.match {
+				t.Fatalf("match: got %v; want %v", match, test.match)
 			}
 		})
 	}

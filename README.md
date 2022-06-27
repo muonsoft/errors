@@ -26,6 +26,10 @@ Key differences and features:
 * error fields are made for the statically typed logger interface;
 * package errors can be easily marshaled into JSON with all fields in a chain.
 
+## Additional features
+
+* `errors.IsOfType[T any](err error)` to test for error types.
+
 ## Installation
 
 Run the following command to install the package

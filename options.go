@@ -24,6 +24,12 @@ func SkipCaller() Option {
 	}
 }
 
+func SkipCallers(skip int) Option {
+	return func(options *Options) {
+		options.skipCallers += skip
+	}
+}
+
 func Bool(key string, value bool) Option {
 	return func(options *Options) {
 		options.AddField(BoolField{Key: key, Value: value})
