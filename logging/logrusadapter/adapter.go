@@ -8,25 +8,37 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Log(err error, logger logrus.FieldLogger) {
-	errors.Log(err, &adapter{l: logger})
+type Option func(adapter *adapter)
+
+func SetLevel(level logrus.Level) Option {
+	return func(adapter *adapter) {
+		adapter.level = level
+	}
+}
+
+func Log(err error, logger logrus.FieldLogger, options ...Option) {
+	a := &adapter{log: logger, level: logrus.ErrorLevel}
+	for _, setOption := range options {
+		setOption(a)
+	}
+	errors.Log(err, a)
 }
 
 type adapter struct {
-	l logrus.FieldLogger
+	log   logrus.FieldLogger
+	level logrus.Level
 }
 
-func (a *adapter) Log(message string)                          { a.l.Error(message) }
-func (a *adapter) SetBool(key string, value bool)              { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetInt(key string, value int)                { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetUint(key string, value uint)              { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetFloat(key string, value float64)          { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetString(key string, value string)          { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetStrings(key string, values []string)      { a.l = a.l.WithField(key, values) }
-func (a *adapter) SetValue(key string, value interface{})      { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetTime(key string, value time.Time)         { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetDuration(key string, value time.Duration) { a.l = a.l.WithField(key, value) }
-func (a *adapter) SetJSON(key string, value json.RawMessage)   { a.l = a.l.WithField(key, value) }
+func (a *adapter) SetBool(key string, value bool)              { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetInt(key string, value int)                { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetUint(key string, value uint)              { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetFloat(key string, value float64)          { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetString(key string, value string)          { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetStrings(key string, values []string)      { a.log = a.log.WithField(key, values) }
+func (a *adapter) SetValue(key string, value interface{})      { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetTime(key string, value time.Time)         { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetDuration(key string, value time.Duration) { a.log = a.log.WithField(key, value) }
+func (a *adapter) SetJSON(key string, value json.RawMessage)   { a.log = a.log.WithField(key, value) }
 
 func (a *adapter) SetStackTrace(trace errors.StackTrace) {
 	type Frame struct {
@@ -42,5 +54,24 @@ func (a *adapter) SetStackTrace(trace errors.StackTrace) {
 		frames[i].Line = frame.Line()
 	}
 
-	a.l = a.l.WithField("stackTrace", frames)
+	a.log = a.log.WithField("stackTrace", frames)
+}
+
+func (a *adapter) Log(message string) {
+	switch a.level {
+	case logrus.PanicLevel:
+		a.log.Panic(message)
+	case logrus.FatalLevel:
+		a.log.Fatal(message)
+	case logrus.ErrorLevel:
+		a.log.Error(message)
+	case logrus.WarnLevel:
+		a.log.Warn(message)
+	case logrus.InfoLevel:
+		a.log.Info(message)
+	case logrus.DebugLevel:
+		a.log.Debug(message)
+	default:
+		a.log.Error(message)
+	}
 }
