@@ -2,6 +2,7 @@ package errors
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -58,6 +59,10 @@ func String(key string, value string) Option {
 	return func(options *Options) {
 		options.AddField(StringField{Key: key, Value: value})
 	}
+}
+
+func Stringer(key string, value fmt.Stringer) Option {
+	return String(key, value.String())
 }
 
 func Strings(key string, values []string) Option {

@@ -69,7 +69,25 @@ func As[T any](err error) (T, bool) {
 				return t, true
 			}
 		}
-		err = Unwrap(err)
+		switch x := err.(type) {
+		case interface{ Unwrap() error }:
+			err = x.Unwrap()
+			if err == nil {
+				var z T
+				return z, false
+			}
+		case interface{ Unwrap() []error }:
+			for _, err := range x.Unwrap() {
+				if t, ok := As[T](err); ok {
+					return t, ok
+				}
+			}
+			var z T
+			return z, false
+		default:
+			var z T
+			return z, false
+		}
 	}
 
 	var z T
