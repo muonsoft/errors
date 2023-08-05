@@ -112,7 +112,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:201",
+					"\t.+/errors/errors_test.go:213",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
 					"\t.+/errors/errors_test.go:112",
 			},
@@ -179,6 +179,18 @@ func TestStackTrace(t *testing.T) {
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
 					"\t.+/errors/errors_test.go:175",
+			},
+		},
+		{
+			name: "Errorf() with multiple errors",
+			err: errors.Errorf(
+				"first: %w; second: %w",
+				errors.Errorf("ooh"),
+				errors.Errorf("ooh"),
+			),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:186",
 			},
 		},
 	}

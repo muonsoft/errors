@@ -124,8 +124,8 @@ func Errorf(message string, argsAndOptions ...interface{}) error {
 	opts := newOptions(options...)
 	err := fmt.Errorf(message, args...)
 
-	argError := getArgError(message, args)
-	if isWrapper(argError) {
+	argErrors := getArgErrors(message, args)
+	if len(argErrors) == 1 && isWrapper(argErrors[0]) {
 		return &wrapped{wrapped: err, fields: opts.fields}
 	}
 
@@ -144,11 +144,15 @@ func Wrap(err error, options ...Option) error {
 	if err == nil {
 		return nil
 	}
-	opts := newOptions(options...)
-
 	if isWrapper(err) {
-		return &wrapped{wrapped: err, fields: opts.fields}
+		if len(options) == 0 {
+			return err
+		}
+
+		return &wrapped{wrapped: err, fields: newOptions(options...).fields}
 	}
+
+	opts := newOptions(options...)
 
 	return &stacked{
 		wrapped: &wrapped{wrapped: err, fields: opts.fields},
@@ -278,28 +282,30 @@ func splitArgsAndOptions(argsAndOptions []interface{}) ([]interface{}, []Option)
 	return args, options
 }
 
-func getArgError(message string, args []interface{}) error {
-	index := getErrorIndex(message)
+func getArgErrors(message string, args []interface{}) []error {
+	indices := getErrorIndices(message)
+	errs := make([]error, 0, len(indices))
 
-	if index >= 0 && index < len(args) {
-		if err, ok := args[index].(error); ok {
-			return err
+	for _, i := range indices {
+		if err, ok := args[i].(error); ok {
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return errs
 }
 
-func getErrorIndex(message string) int {
-	i := -1
+func getErrorIndices(message string) []int {
+	indices := make([]int, 0, 1)
 	isFormat := false
 
+	i := -1
 	for _, s := range message {
 		if isFormat {
 			if s != '%' {
 				i++
 				if s == 'w' {
-					return i
+					indices = append(indices, i)
 				}
 			}
 			isFormat = false
@@ -308,7 +314,7 @@ func getErrorIndex(message string) int {
 		}
 	}
 
-	return -1
+	return indices
 }
 
 type mapWriter map[string]interface{}
