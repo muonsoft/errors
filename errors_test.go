@@ -24,7 +24,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:23",
+					"\t.+/errors/errors_test.go:24",
 			},
 		},
 		{
@@ -32,7 +32,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Errorf("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:31",
+					"\t.+/errors/errors_test.go:32",
 			},
 		},
 		{
@@ -40,7 +40,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:39",
+					"\t.+/errors/errors_test.go:40",
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:47",
+					"\t.+/errors/errors_test.go:48",
 			},
 		},
 		{
@@ -56,7 +56,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:55",
+					"\t.+/errors/errors_test.go:56",
 			},
 		},
 		{
@@ -64,7 +64,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:63",
+					"\t.+/errors/errors_test.go:64",
 			},
 		},
 		{
@@ -72,7 +72,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:71",
+					"\t.+/errors/errors_test.go:72",
 			},
 		},
 		{
@@ -80,7 +80,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%%w %v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:79",
+					"\t.+/errors/errors_test.go:80",
 			},
 		},
 		{
@@ -88,7 +88,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%s: %w", "prefix", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:87",
+					"\t.+/errors/errors_test.go:88",
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:95",
+					"\t.+/errors/errors_test.go:96",
 			},
 		},
 		{
@@ -104,7 +104,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", fmt.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:103",
+					"\t.+/errors/errors_test.go:104",
 			},
 		},
 		{
@@ -112,9 +112,9 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:200",
+					"\t.+/errors/errors_test.go:201",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:111",
+					"\t.+/errors/errors_test.go:112",
 			},
 		},
 		{
@@ -122,7 +122,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCaller(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:121",
+					"\t.+/errors/errors_test.go:122",
 			},
 		},
 		{
@@ -130,7 +130,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCallers(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:129",
+					"\t.+/errors/errors_test.go:130",
 			},
 		},
 		{
@@ -138,7 +138,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errorfSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:137",
+					"\t.+/errors/errors_test.go:138",
 			},
 		},
 		{
@@ -146,7 +146,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Join(fmt.Errorf("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:145",
+					"\t.+/errors/errors_test.go:146",
 			},
 		},
 		{
@@ -157,7 +157,7 @@ func TestStackTrace(t *testing.T) {
 			),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:153",
+					"\t.+/errors/errors_test.go:154",
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func TestStackTrace(t *testing.T) {
 			),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:165",
+					"\t.+/errors/errors_test.go:166",
 			},
 		},
 		{
@@ -178,7 +178,7 @@ func TestStackTrace(t *testing.T) {
 			),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:174",
+					"\t.+/errors/errors_test.go:175",
 			},
 		},
 	}

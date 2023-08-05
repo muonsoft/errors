@@ -248,7 +248,13 @@ func (e *stacked) Format(s fmt.State, verb rune) {
 func (e *stacked) MarshalJSON() ([]byte, error) {
 	data := mapWriter{"error": e.Error()}
 	data.SetStackTrace(e.StackTrace())
-	e.LogFields(data)
+
+	var err error
+	for err = e; err != nil; err = Unwrap(err) {
+		if loggable, ok := err.(LoggableError); ok {
+			loggable.LogFields(data)
+		}
+	}
 
 	return json.Marshal(data)
 }

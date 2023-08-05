@@ -39,7 +39,7 @@ func TestLog_errorWithStack(t *testing.T) {
 		{
 			Function: "github.com/muonsoft/errors_test.TestLog_errorWithStack",
 			File:     ".+errors/logging_test.go",
-			Line:     29,
+			Line:     30,
 		},
 	})
 	logger.AssertField(t, "key", "value")

@@ -51,7 +51,9 @@ type joinError struct {
 	errs []error
 }
 
-// todo: add marshal json?
+func (e *joinError) LogFields(logger FieldLogger) {
+	logFieldsFromErrors(logger, e.errs)
+}
 
 func (e *joinError) Error() string {
 	var b []byte
@@ -68,4 +70,17 @@ func (e *joinError) Error() string {
 
 func (e *joinError) Unwrap() []error {
 	return e.errs
+}
+
+func logFieldsFromErrors(logger FieldLogger, errs []error) {
+	for _, err := range errs {
+		for w := err; w != nil; w = Unwrap(w) {
+			if j, ok := w.(interface{ Unwrap() []error }); ok {
+				logFieldsFromErrors(logger, j.Unwrap())
+			}
+			if loggable, ok := w.(LoggableError); ok {
+				loggable.LogFields(logger)
+			}
+		}
+	}
 }
