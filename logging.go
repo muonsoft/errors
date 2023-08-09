@@ -43,12 +43,24 @@ func Log(err error, logger Logger) {
 		if s, ok := e.(stackTracer); ok {
 			logger.SetStackTrace(s.StackTrace())
 		}
+	}
+	logFields(err, logger)
+
+	logger.Log(err.Error())
+}
+
+func logFields(err error, logger Logger) {
+	for e := err; e != nil; e = errors.Unwrap(e) {
 		if w, ok := e.(LoggableError); ok {
 			w.LogFields(logger)
 		}
-	}
 
-	logger.Log(err.Error())
+		if joined, ok := e.(interface{ Unwrap() []error }); ok {
+			for _, u := range joined.Unwrap() {
+				logFields(u, logger)
+			}
+		}
+	}
 }
 
 type BoolField struct {

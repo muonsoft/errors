@@ -7,8 +7,6 @@ linters:
     - bidichk
     - bodyclose
     - contextcheck
-    - cyclop
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -16,7 +14,6 @@ linters:
     - exportloopref
     - forbidigo
     - funlen
-    - gci
     - gocognit
     - goconst
     - gocritic
@@ -46,7 +43,6 @@ linters:
     - predeclared
     - promlinter
     - revive
-    - structcheck
     - stylecheck
     - tenv
     - testpackage
@@ -56,7 +52,6 @@ linters:
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
 
 issues:
@@ -84,3 +79,9 @@ issues:
         - errcheck
         - goconst
         - gocritic
+
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true

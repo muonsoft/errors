@@ -2,6 +2,7 @@ package errors_test
 
 import (
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -23,7 +24,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:23",
+					"\t.+/errors/errors_test.go:24",
 			},
 		},
 		{
@@ -31,7 +32,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Errorf("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:31",
+					"\t.+/errors/errors_test.go:32",
 			},
 		},
 		{
@@ -39,7 +40,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:39",
+					"\t.+/errors/errors_test.go:40",
 			},
 		},
 		{
@@ -47,7 +48,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Wrap(errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:47",
+					"\t.+/errors/errors_test.go:48",
 			},
 		},
 		{
@@ -55,7 +56,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:55",
+					"\t.+/errors/errors_test.go:56",
 			},
 		},
 		{
@@ -63,7 +64,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:63",
+					"\t.+/errors/errors_test.go:64",
 			},
 		},
 		{
@@ -71,7 +72,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Wrap(errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:71",
+					"\t.+/errors/errors_test.go:72",
 			},
 		},
 		{
@@ -79,7 +80,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%%w %v", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:79",
+					"\t.+/errors/errors_test.go:80",
 			},
 		},
 		{
@@ -87,7 +88,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%s: %w", "prefix", errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:87",
+					"\t.+/errors/errors_test.go:88",
 			},
 		},
 		{
@@ -95,7 +96,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", errors.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:95",
+					"\t.+/errors/errors_test.go:96",
 			},
 		},
 		{
@@ -103,7 +104,7 @@ func TestStackTrace(t *testing.T) {
 			err:  errors.Errorf("%w", fmt.Errorf("%w", errors.New("ooh"))),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:103",
+					"\t.+/errors/errors_test.go:104",
 			},
 		},
 		{
@@ -111,9 +112,9 @@ func TestStackTrace(t *testing.T) {
 			err:  wrap(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.wrap\n" +
-					"\t.+/errors/errors_test.go:160",
+					"\t.+/errors/errors_test.go:213",
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:111",
+					"\t.+/errors/errors_test.go:112",
 			},
 		},
 		{
@@ -121,7 +122,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCaller(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:121",
+					"\t.+/errors/errors_test.go:122",
 			},
 		},
 		{
@@ -129,7 +130,7 @@ func TestStackTrace(t *testing.T) {
 			err:  wrapSkipCallers(errors.New("ooh")),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:129",
+					"\t.+/errors/errors_test.go:130",
 			},
 		},
 		{
@@ -137,7 +138,59 @@ func TestStackTrace(t *testing.T) {
 			err:  errorfSkipCaller("ooh"),
 			want: []string{
 				"github.com/muonsoft/errors_test.TestStackTrace\n" +
-					"\t.+/errors/errors_test.go:137",
+					"\t.+/errors/errors_test.go:138",
+			},
+		},
+		{
+			name: "join one std error",
+			err:  errors.Join(fmt.Errorf("ooh")),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:146",
+			},
+		},
+		{
+			name: "join two std errors",
+			err: errors.Join(
+				fmt.Errorf("ooh"),
+				fmt.Errorf("ooh"),
+			),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:154",
+			},
+		},
+		{
+			name: "join one stacked error",
+			err: errors.Join(
+				errors.Errorf("ooh"),
+			),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:166",
+			},
+		},
+		{
+			name: "join two stacked errors",
+			err: errors.Join(
+				errors.Errorf("ooh"),
+				errors.Errorf("ooh"),
+			),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:175",
+			},
+		},
+		{
+			name: "Errorf() with multiple errors",
+			err: errors.Errorf(
+				"first: %w; second: %w",
+				errors.Errorf("ooh"),
+				errors.Errorf("ooh"),
+			),
+			want: []string{
+				"github.com/muonsoft/errors_test.TestStackTrace\n" +
+					"\t.+/errors/errors_test.go:186",
 			},
 		},
 	}
@@ -201,6 +254,11 @@ func TestFields(t *testing.T) {
 		{
 			name:     "string",
 			err:      errors.Wrap(errors.Errorf("error"), errors.String("key", "value")),
+			expected: "value",
+		},
+		{
+			name:     "stringer interface",
+			err:      errors.Wrap(errors.Errorf("error"), errors.Stringer("key", stringer{s: "value"})),
 			expected: "value",
 		},
 		{
@@ -394,6 +452,43 @@ func TestAs(t *testing.T) {
 			true,
 			errFileNotFound,
 		},
+		{
+			"wrapped wrapped error",
+			errors.Wrap(wrapped{"error", errorT{"T"}}),
+			func(err error) (any, bool) {
+				return errors.As[errorT](err)
+			},
+			true,
+			errorT{"T"},
+		},
+		{
+			"wrapped joined error",
+			errors.Wrap(
+				errors.Join(
+					wrapped{"error", errorT{"T"}},
+					wrapped{"error", errorT{"T"}},
+				),
+			),
+			func(err error) (any, bool) {
+				return errors.As[errorT](err)
+			},
+			true,
+			errorT{"T"},
+		},
+		{
+			"wrapped std joined error",
+			errors.Wrap(
+				stderrors.Join(
+					wrapped{"error", errorT{"T"}},
+					wrapped{"error", errorT{"T"}},
+				),
+			),
+			func(err error) (any, bool) {
+				return errors.As[errorT](err)
+			},
+			true,
+			errorT{"T"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -555,3 +650,11 @@ type wrapped struct {
 func (e wrapped) Error() string { return e.msg }
 
 func (e wrapped) Unwrap() error { return e.err }
+
+type stringer struct {
+	s string
+}
+
+func (s stringer) String() string {
+	return s.s
+}
