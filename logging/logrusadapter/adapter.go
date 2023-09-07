@@ -57,7 +57,17 @@ func (a *adapter) SetStackTrace(trace errors.StackTrace) {
 	a.log = a.log.WithField("stackTrace", frames)
 }
 
+type levelLogger interface {
+	Log(level logrus.Level, args ...interface{})
+}
+
 func (a *adapter) Log(message string) {
+	if levelLog, ok := a.log.(levelLogger); ok {
+		levelLog.Log(a.level, message)
+
+		return
+	}
+
 	switch a.level {
 	case logrus.PanicLevel:
 		a.log.Panic(message)
