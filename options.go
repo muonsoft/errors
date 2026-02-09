@@ -50,9 +50,17 @@ func Bool(key string, value bool) Option {
 }
 
 // Int returns an Option that adds an integer attribute to the error.
+// The value is converted to int64 for slog compatibility.
 func Int(key string, value int) Option {
 	return func(options *Options) {
 		options.addAttr(slog.Int(key, value))
+	}
+}
+
+// Int64 returns an Option that adds an int64 attribute to the error.
+func Int64(key string, value int64) Option {
+	return func(options *Options) {
+		options.addAttr(slog.Int64(key, value))
 	}
 }
 
@@ -64,11 +72,24 @@ func Uint(key string, value uint) Option {
 	}
 }
 
-// Float returns an Option that adds a float64 attribute to the error.
-func Float(key string, value float64) Option {
+// Uint64 returns an Option that adds a uint64 attribute to the error.
+func Uint64(key string, value uint64) Option {
+	return func(options *Options) {
+		options.addAttr(slog.Uint64(key, value))
+	}
+}
+
+// Float64 returns an Option that adds a float64 attribute to the error.
+func Float64(key string, value float64) Option {
 	return func(options *Options) {
 		options.addAttr(slog.Float64(key, value))
 	}
+}
+
+// Float returns an Option that adds a float64 attribute to the error.
+// Alias for Float64 for backward compatibility.
+func Float(key string, value float64) Option {
+	return Float64(key, value)
 }
 
 // String returns an Option that adds a string attribute to the error.
@@ -92,11 +113,27 @@ func Strings(key string, values []string) Option {
 	}
 }
 
-// Value returns an Option that adds an arbitrary value attribute to the error.
-func Value(key string, value interface{}) Option {
+// Any returns an Option that adds an arbitrary value attribute to the error.
+// This is the most flexible option and can handle any type that slog.Any supports.
+//
+// Example:
+//
+//	err := errors.Wrap(err,
+//	    errors.Any("metadata", map[string]string{"version": "v1.0"}),
+//	    errors.Any("items", []int{1, 2, 3}),
+//	)
+func Any(key string, value interface{}) Option {
 	return func(options *Options) {
 		options.addAttr(slog.Any(key, value))
 	}
+}
+
+// Value returns an Option that adds an arbitrary value attribute to the error.
+//
+// Deprecated: Use Any instead. Value is kept for backward compatibility
+// but will be removed in a future version.
+func Value(key string, value interface{}) Option {
+	return Any(key, value)
 }
 
 // Time returns an Option that adds a time.Time attribute to the error.

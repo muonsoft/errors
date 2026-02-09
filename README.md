@@ -133,12 +133,26 @@ err := errors.Wrap(
 )
 ```
 
-You can also use `errors.Attr()` to pass `slog.Attr` directly:
+You can use all slog attribute types directly:
 
 ```golang
 err := errors.Wrap(
 	err,
-	errors.Attr(slog.Int64("timestamp", time.Now().Unix())),
+	errors.Int64("timestamp", time.Now().Unix()),
+	errors.Uint64("bytes_written", uint64(1024*1024*500)),
+	errors.Float64("cpu_usage", 0.85),
+	errors.Any("metadata", map[string]interface{}{
+		"version": "v1.2.3",
+		"region":  "us-west-1",
+	}),
+)
+```
+
+Or pass `slog.Attr` directly for maximum flexibility:
+
+```golang
+err := errors.Wrap(
+	err,
 	errors.Attr(slog.Group("metadata",
 		slog.String("version", "v1.2.3"),
 		slog.Bool("production", true),
@@ -338,25 +352,34 @@ attrs := errors.Attrs(wrapped)
 
 ## Available attribute options
 
-The package provides convenience functions for creating attributes:
+The package provides convenience functions for creating attributes that correspond to all slog types:
 
 ```golang
+// Basic types
 errors.Bool(key string, value bool)
-errors.Int(key string, value int)
-errors.Uint(key string, value uint)
-errors.Float(key string, value float64)
+errors.Int(key string, value int)               // Converted to int64
+errors.Int64(key string, value int64)
+errors.Uint(key string, value uint)             // Uses slog.Any
+errors.Uint64(key string, value uint64)
+errors.Float(key string, value float64)         // Alias for Float64
+errors.Float64(key string, value float64)
 errors.String(key string, value string)
-errors.Stringer(key string, value fmt.Stringer)
-errors.Strings(key string, values []string)
-errors.Value(key string, value interface{})
+
+// Complex types
+errors.Stringer(key string, value fmt.Stringer) // Converted to string
+errors.Strings(key string, values []string)     // Uses slog.Any
+errors.Any(key string, value interface{})       // For any type
 errors.Time(key string, value time.Time)
 errors.Duration(key string, value time.Duration)
-errors.JSON(key string, value json.RawMessage)
+errors.JSON(key string, value json.RawMessage)  // Uses slog.Any
 
-// New slog-specific options
-errors.Attr(attr slog.Attr)                    // Add any slog.Attr directly
-errors.WithAttrs(attrs ...slog.Attr)           // Add multiple slog.Attr values
-errors.Group(key string, attrs ...slog.Attr)   // Create a grouped attribute
+// slog-specific options
+errors.Attr(attr slog.Attr)                     // Add any slog.Attr directly
+errors.WithAttrs(attrs ...slog.Attr)            // Add multiple slog.Attr values
+errors.Group(key string, attrs ...slog.Attr)    // Create a grouped attribute
+
+// Deprecated
+errors.Value(key string, value interface{})     // Use Any instead
 ```
 
 ## Contributing

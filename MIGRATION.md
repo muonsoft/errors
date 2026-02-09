@@ -173,7 +173,34 @@ func TestMyError(t *testing.T) {
 
 ## New Features
 
-### 1. Grouped Attributes
+### 1. Complete slog Type Coverage
+
+All slog attribute types are now supported with dedicated functions:
+
+```go
+// New in v0.5.0
+errors.Int64(key string, value int64)
+errors.Uint64(key string, value uint64)
+errors.Float64(key string, value float64)
+errors.Any(key string, value interface{})  // Replaces Value
+
+// Deprecated
+errors.Value(key string, value interface{}) // Use Any instead
+```
+
+Example:
+
+```go
+err := errors.Wrap(
+    dbErr,
+    errors.Int64("timestamp", time.Now().Unix()),
+    errors.Uint64("bytes_processed", uint64(1024*1024)),
+    errors.Float64("cpu_usage", 0.75),
+    errors.Any("metadata", map[string]string{"region": "us-west"}),
+)
+```
+
+### 2. Grouped Attributes
 
 Group related attributes together for better structure:
 
@@ -214,7 +241,7 @@ err := errors.Wrap(
 // query.duration: 150ms
 ```
 
-### 2. Direct slog.Attr Usage
+### 3. Direct slog.Attr Usage
 
 Pass `slog.Attr` directly for maximum flexibility:
 
@@ -229,7 +256,7 @@ err := errors.Wrap(
 )
 ```
 
-### 3. Multiple Attributes at Once
+### 4. Multiple Attributes at Once
 
 ```go
 commonAttrs := []slog.Attr{
@@ -240,7 +267,7 @@ commonAttrs := []slog.Attr{
 err := errors.Wrap(err, errors.WithAttrs(commonAttrs...))
 ```
 
-### 4. slog.LogValuer Implementation
+### 5. slog.LogValuer Implementation
 
 Errors automatically work with slog:
 
