@@ -75,21 +75,29 @@ func NewNotFoundError() error {
 and returns the string as a value that satisfies error. You can wrap an error using `%w` modifier.
 
 `errors.Errorf()` also records the stack trace at the point it was called. If the wrapped error
-contains a stack trace then a new one will not be added to a chain. Also, you can pass 
-options to set structured attributes or to skip a caller in a stack trace.
-Options must be specified after formatting arguments.
+contains a stack trace then a new one will not be added to a chain.
+
+You can pass options to set structured attributes or to skip a caller in a stack trace.
+Both helper functions like `errors.String()` and `slog.Attr` directly are supported.
+Options/attributes must be specified after formatting arguments.
 
 ```golang
 row := repository.db.QueryRow(ctx, findSQL, id)
 var product Product
 err := row.Scan(&product.ID, &product.Name)
 if err != nil {
-	// Use errors.Errorf to wrap the library error with the message context and
-	// error attributes to be used for structured logging.
+	// Option 1: Use helper functions
 	return nil, errors.Errorf(
 		"%w: %v", errSQLError, err.Error(),
 		errors.String("sql", findSQL),
 		errors.Int("productID", id),
+	)
+	
+	// Option 2: Use slog.Attr directly (more idiomatic)
+	return nil, errors.Errorf(
+		"%w: %v", errSQLError, err.Error(),
+		slog.String("sql", findSQL),
+		slog.Int("productID", id),
 	)
 }
 ```
@@ -98,65 +106,97 @@ if err != nil {
 
 `errors.Wrap()` returns an error annotating err with a stack trace at the point `errors.Wrap()` is called.
 If the wrapped error contains a stack trace then a new one will not be added to a chain.
-If err is nil, Wrap returns nil. Also, you can pass options to set structured attributes or to skip a caller
-in a stack trace.
+If err is nil, Wrap returns nil.
+
+You can pass options to set structured attributes or to skip a caller in a stack trace.
+Both helper functions like `errors.String()` and `slog.Attr` directly are supported.
 
 ```golang
 data, err := service.Handle(ctx, userID, message)
 if err != nil {
-	// Adds a stack trace to the line that was called (if there is no stack trace in the chain already)
-	// and adds attributes for structured logging.
+	// Option 1: Use helper functions
 	return nil, errors.Wrap(
 		err,
 		errors.Int("userID", userID),
 		errors.String("userMessage", message),
 	)
+	
+	// Option 2: Use slog.Attr directly (recommended)
+	return nil, errors.Wrap(
+		err,
+		slog.Int("userID", userID),
+		slog.String("userMessage", message),
+	)
+	
+	// Option 3: Mix both styles
+	return nil, errors.Wrap(
+		err,
+		errors.SkipCaller(),           // Option for stack trace
+		slog.String("userMessage", message),  // slog.Attr for logging
+	)
 }
 ```
 
-### Working with grouped attributes
+### Working with slog attributes
 
-The package supports grouped attributes via `slog.Group`, allowing you to organize related attributes:
+The package has native slog integration - you can pass `slog.Attr` directly to `Wrap()` and `Errorf()`:
 
 ```golang
+// Use slog attributes directly (recommended)
 err := errors.Wrap(
 	dbErr,
-	errors.Group("request",
-		slog.String("method", "POST"),
-		slog.String("path", "/api/users"),
-		slog.Int("status", 500),
-	),
-	errors.Group("database",
-		slog.String("query", "INSERT INTO users..."),
-		slog.Duration("duration", 150*time.Millisecond),
-	),
+	slog.String("table", "users"),
+	slog.Int("id", 123),
+	slog.Duration("query_time", 50*time.Millisecond),
 )
-```
 
-You can use all slog attribute types directly:
+// Or use helper functions (equivalent)
+err := errors.Wrap(
+	dbErr,
+	errors.String("table", "users"),
+	errors.Int("id", 123),
+	errors.Duration("query_time", 50*time.Millisecond),
+)
 
-```golang
+// All slog types are supported
 err := errors.Wrap(
 	err,
-	errors.Int64("timestamp", time.Now().Unix()),
-	errors.Uint64("bytes_written", uint64(1024*1024*500)),
-	errors.Float64("cpu_usage", 0.85),
-	errors.Any("metadata", map[string]interface{}{
+	slog.Bool("cached", false),
+	slog.Int64("timestamp", time.Now().Unix()),
+	slog.Uint64("bytes_written", uint64(1024*1024*500)),
+	slog.Float64("cpu_usage", 0.85),
+	slog.Any("metadata", map[string]interface{}{
 		"version": "v1.2.3",
 		"region":  "us-west-1",
 	}),
 )
 ```
 
-Or pass `slog.Attr` directly for maximum flexibility:
+### Working with grouped attributes
+
+Organize related attributes using `slog.Group` directly:
 
 ```golang
 err := errors.Wrap(
-	err,
-	errors.Attr(slog.Group("metadata",
-		slog.String("version", "v1.2.3"),
-		slog.Bool("production", true),
-	)),
+	dbErr,
+	slog.Group("request",
+		slog.String("method", "POST"),
+		slog.String("path", "/api/users"),
+		slog.Int("status", 500),
+	),
+	slog.Group("database",
+		slog.String("query", "INSERT INTO users..."),
+		slog.Duration("duration", 150*time.Millisecond),
+	),
+)
+
+// Or use the errors.Group helper
+err := errors.Wrap(
+	dbErr,
+	errors.Group("request",
+		slog.String("method", "POST"),
+		slog.String("path", "/api/users"),
+	),
 )
 ```
 

@@ -115,10 +115,17 @@ func Unwrap(err error) error {
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error. You can wrap an error using %w modifier as it
 // does fmt.Errorf function.
+//
 // Errorf also records the stack trace at the point it was called. If the wrapped error
 // contains a stack trace then a new one will not be added to a chain.
-// Also, you can pass an options to set a structured fields or to skip a caller
-// in a stack trace. Options must be specified after formatting arguments.
+//
+// You can pass options to set structured attributes or to skip a caller in a stack trace.
+// Both Option functions and slog.Attr values are accepted.
+// Options/attributes must be specified after formatting arguments:
+//
+//	errors.Errorf("failed: %w", err, errors.String("key", "value"))
+//	errors.Errorf("failed: %w", err, slog.String("key", "value"))
+//	errors.Errorf("failed: %w", err, errors.SkipCaller(), slog.Int("id", 123))
 func Errorf(message string, argsAndOptions ...interface{}) error {
 	args, options := splitArgsAndOptions(argsAndOptions)
 	opts := newOptions(options...)
@@ -138,12 +145,20 @@ func Errorf(message string, argsAndOptions ...interface{}) error {
 // Wrap returns an error annotating err with a stack trace at the point Wrap is called.
 // If the wrapped error contains a stack trace then a new one will not be added to a chain.
 // If err is nil, Wrap returns nil.
-// Also, you can pass an options to set a structured fields or to skip a caller
-// in a stack trace.
-func Wrap(err error, options ...Option) error {
+//
+// You can pass options to set structured attributes or to skip a caller in a stack trace.
+// Both Option functions and slog.Attr values are accepted:
+//
+//	errors.Wrap(err, errors.String("key", "value"))        // Using Option
+//	errors.Wrap(err, slog.String("key", "value"))          // Using slog.Attr directly
+//	errors.Wrap(err, errors.SkipCaller(), slog.Int("id", 123))  // Mixed
+func Wrap(err error, optsOrAttrs ...interface{}) error {
 	if err == nil {
 		return nil
 	}
+
+	options := convertToOptions(optsOrAttrs)
+
 	if isWrapper(err) {
 		if len(options) == 0 {
 			return err
@@ -265,7 +280,7 @@ func (e *stacked) MarshalJSON() ([]byte, error) {
 func splitArgsAndOptions(argsAndOptions []interface{}) ([]interface{}, []Option) {
 	argsCount := len(argsAndOptions)
 	for i := argsCount - 1; i >= 0; i-- {
-		if _, ok := argsAndOptions[i].(Option); ok {
+		if isOptionOrAttr(argsAndOptions[i]) {
 			argsCount--
 		} else {
 			break
@@ -273,12 +288,35 @@ func splitArgsAndOptions(argsAndOptions []interface{}) ([]interface{}, []Option)
 	}
 
 	args := argsAndOptions[:argsCount]
-	options := make([]Option, 0, len(argsAndOptions)-argsCount)
-	for i := argsCount; i < len(argsAndOptions); i++ {
-		options = append(options, argsAndOptions[i].(Option))
-	}
+	optsOrAttrs := argsAndOptions[argsCount:]
+	options := convertToOptions(optsOrAttrs)
 
 	return args, options
+}
+
+// isOptionOrAttr checks if a value is either an Option or slog.Attr
+func isOptionOrAttr(v interface{}) bool {
+	if _, ok := v.(Option); ok {
+		return true
+	}
+	if _, ok := v.(slog.Attr); ok {
+		return true
+	}
+	return false
+}
+
+// convertToOptions converts a slice of Option and/or slog.Attr to []Option
+func convertToOptions(items []interface{}) []Option {
+	options := make([]Option, 0, len(items))
+	for _, item := range items {
+		switch v := item.(type) {
+		case Option:
+			options = append(options, v)
+		case slog.Attr:
+			options = append(options, Attr(v))
+		}
+	}
+	return options
 }
 
 func getArgErrors(message string, args []interface{}) []error {
@@ -361,7 +399,7 @@ func writeAttrs(w io.Writer, attrs []slog.Attr, prefix string) {
 // writeAttr writes a single attribute value to an io.Writer
 func writeAttr(w io.Writer, key string, value slog.Value) {
 	io.WriteString(w, "\n"+key+": ")
-	
+
 	switch value.Kind() {
 	case slog.KindBool:
 		if value.Bool() {

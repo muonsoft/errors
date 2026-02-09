@@ -243,16 +243,33 @@ err := errors.Wrap(
 
 ### 3. Direct slog.Attr Usage
 
-Pass `slog.Attr` directly for maximum flexibility:
+v0.5.0 allows passing `slog.Attr` directly without wrapping in `errors.Attr()`:
 
 ```go
+// You can pass slog.Attr directly (NEW!)
 err := errors.Wrap(
     err,
-    errors.Attr(slog.Int64("timestamp", time.Now().Unix())),
-    errors.Attr(slog.Group("metadata",
+    slog.Int64("timestamp", time.Now().Unix()),
+    slog.String("user", "john"),
+    slog.Group("metadata",
         slog.String("version", "v1.2.3"),
         slog.Bool("production", true),
-    )),
+    ),
+)
+
+// Or use helper functions (also works)
+err := errors.Wrap(
+    err,
+    errors.Int64("timestamp", time.Now().Unix()),
+    errors.String("user", "john"),
+)
+
+// Or mix both styles
+err := errors.Wrap(
+    err,
+    errors.SkipCaller(),              // errors.Option
+    slog.String("user", "john"),      // slog.Attr directly
+    errors.Int("id", 123),            // errors.Option
 )
 ```
 
