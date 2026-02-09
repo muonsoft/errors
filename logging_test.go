@@ -33,18 +33,18 @@ func TestAttrs_errorWithStack(t *testing.T) {
 		),
 		errors.String("key", "value"),
 	)
-	
+
 	attrs := errors.Attrs(err)
-	
+
 	// Should have 3 attributes
 	if len(attrs) != 3 {
 		t.Fatalf("expected 3 attrs, got %d", len(attrs))
 	}
-	
+
 	// Create a mock logger to use assertion helpers
 	logger := errorstest.NewLogger()
 	logger.Attrs = attrs
-	
+
 	logger.AssertField(t, "key", "value")
 	logger.AssertField(t, "deepKey", "deepValue")
 	logger.AssertField(t, "deepestKey", "deepestValue")
@@ -64,18 +64,18 @@ func TestAttrs_joinedErrors(t *testing.T) {
 			),
 		),
 	)
-	
+
 	attrs := errors.Attrs(err)
-	
+
 	// Should have 5 attributes
 	if len(attrs) < 5 {
 		t.Fatalf("expected at least 5 attrs, got %d", len(attrs))
 	}
-	
+
 	// Create a mock logger to use assertion helpers
 	logger := errorstest.NewLogger()
 	logger.Attrs = attrs
-	
+
 	logger.AssertField(t, "key1", "value1")
 	logger.AssertField(t, "key2", "value2")
 	logger.AssertField(t, "key3", "value3")
@@ -88,7 +88,7 @@ func TestLog(t *testing.T) {
 	var capturedAttrs []slog.Attr
 	var capturedMsg string
 	var capturedLevel slog.Level
-	
+
 	handler := &testHandler{
 		onHandle: func(ctx context.Context, r slog.Record) error {
 			capturedMsg = r.Message
@@ -100,32 +100,32 @@ func TestLog(t *testing.T) {
 			return nil
 		},
 	}
-	
+
 	logger := slog.New(handler)
-	
+
 	err := errors.Wrap(
 		errors.Errorf("test error", errors.String("user", "john"), errors.Int("id", 123)),
 	)
-	
+
 	errors.Log(context.Background(), logger, slog.LevelError, err)
-	
+
 	if capturedMsg != "test error" {
 		t.Errorf("expected message 'test error', got '%s'", capturedMsg)
 	}
-	
+
 	if capturedLevel != slog.LevelError {
 		t.Errorf("expected level Error, got %v", capturedLevel)
 	}
-	
+
 	if len(capturedAttrs) < 2 {
 		t.Fatalf("expected at least 2 attrs, got %d", len(capturedAttrs))
 	}
-	
+
 	// Check for user and id attributes
 	hasUser := false
 	hasID := false
 	hasStackTrace := false
-	
+
 	for _, attr := range capturedAttrs {
 		if attr.Key == "user" && attr.Value.String() == "john" {
 			hasUser = true
@@ -137,7 +137,7 @@ func TestLog(t *testing.T) {
 			hasStackTrace = true
 		}
 	}
-	
+
 	if !hasUser {
 		t.Error("expected 'user' attribute")
 	}
@@ -149,7 +149,7 @@ func TestLog(t *testing.T) {
 	}
 }
 
-// testHandler is a simple slog.Handler for testing
+// testHandler is a simple slog.Handler for testing.
 type testHandler struct {
 	onHandle func(ctx context.Context, r slog.Record) error
 }

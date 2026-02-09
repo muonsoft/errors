@@ -8,7 +8,7 @@ import (
 	"github.com/muonsoft/errors"
 )
 
-// TestSlogAttrDirectUsage tests that slog.Attr can be passed directly to Errorf and Wrap
+// TestSlogAttrDirectUsage tests that slog.Attr can be passed directly to Errorf and Wrap.
 func TestSlogAttrDirectUsage(t *testing.T) {
 	t.Run("Wrap with slog.Attr", func(t *testing.T) {
 		err := errors.Wrap(
@@ -170,7 +170,7 @@ func TestSlogAttrDirectUsage(t *testing.T) {
 	})
 }
 
-// TestSlogAttrVsOption tests that slog.Attr and Option produce equivalent results
+// TestSlogAttrVsOption tests that slog.Attr and Option produce equivalent results.
 func TestSlogAttrVsOption(t *testing.T) {
 	tests := []struct {
 		name       string

@@ -316,7 +316,7 @@ func TestFields(t *testing.T) {
 			if len(attrs) == 0 {
 				t.Fatalf("expected %#v to have attributes", test.err)
 			}
-			
+
 			// Find the "key" attribute
 			var found bool
 			var value interface{}
@@ -327,11 +327,11 @@ func TestFields(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if !found {
 				t.Fatalf("expected %#v to have attribute with key 'key'", test.err)
 			}
-			
+
 			if !reflect.DeepEqual(value, test.expected) {
 				t.Errorf("want value %v (%T), got %v (%T)", test.expected, test.expected, value, value)
 			}

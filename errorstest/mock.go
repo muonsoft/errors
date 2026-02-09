@@ -51,7 +51,7 @@ func (m *Logger) AssertField(t *testing.T, key string, expected interface{}) {
 	}
 }
 
-// findAttr recursively searches for an attribute by key, handling groups with dot notation
+// findAttr recursively searches for an attribute by key, handling groups with dot notation.
 func (m *Logger) findAttr(key string, attrs []slog.Attr, prefix string) (interface{}, bool) {
 	for _, attr := range attrs {
 		if attr.Value.Kind() == slog.KindGroup {
@@ -157,7 +157,7 @@ func (m *Logger) AssertStackTrace(t *testing.T, want StackTrace) {
 	}
 }
 
-// attrsEqual compares two slog.Attr values for equality
+// attrsEqual compares two slog.Attr values for equality.
 func attrsEqual(a, b slog.Attr) bool {
 	if a.Key != b.Key {
 		return false

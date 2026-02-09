@@ -199,7 +199,7 @@ func Group(key string, attrs ...slog.Attr) Option {
 	}
 }
 
-// attrsToAny converts []slog.Attr to []any for use with slog.Group
+// attrsToAny converts []slog.Attr to []any for use with slog.Group.
 func attrsToAny(attrs []slog.Attr) []any {
 	result := make([]any, len(attrs))
 	for i, attr := range attrs {

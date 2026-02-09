@@ -40,13 +40,13 @@ func ExampleLog_loggableError() {
 
 	// Get attributes from error
 	attrs := errors.Attrs(err)
-	
+
 	// Create a map for display
 	fields := make(map[string]interface{})
 	for _, attr := range attrs {
 		fields[attr.Key] = attr.Value.Any()
 	}
-	
+
 	// Get stack trace
 	var stackTrace errors.StackTrace
 	for e := err; e != nil; e = errors.Unwrap(e) {
@@ -55,7 +55,7 @@ func ExampleLog_loggableError() {
 			break
 		}
 	}
-	
+
 	fmt.Println(`error message:`, err.Error())
 	fmt.Println(`error fields:`, fields)
 	fmt.Printf(

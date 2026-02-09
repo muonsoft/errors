@@ -10,7 +10,7 @@ import (
 	"github.com/muonsoft/errors"
 )
 
-// TestGroupAttributes tests error attributes with slog groups
+// TestGroupAttributes tests error attributes with slog groups.
 func TestGroupAttributes(t *testing.T) {
 	t.Run("simple group", func(t *testing.T) {
 		err := errors.Wrap(
@@ -212,7 +212,7 @@ func TestGroupAttributes(t *testing.T) {
 	})
 }
 
-// TestGroupJSON tests JSON marshaling of grouped attributes
+// TestGroupJSON tests JSON marshaling of grouped attributes.
 func TestGroupJSON(t *testing.T) {
 	t.Run("group with key creates nested object", func(t *testing.T) {
 		err := errors.Wrap(
@@ -312,7 +312,7 @@ func TestGroupJSON(t *testing.T) {
 	})
 }
 
-// TestGroupFormatting tests %+v formatting of grouped attributes
+// TestGroupFormatting tests %+v formatting of grouped attributes.
 func TestGroupFormatting(t *testing.T) {
 	t.Run("group with key uses dot notation", func(t *testing.T) {
 		err := errors.Wrap(
@@ -376,7 +376,7 @@ func TestGroupFormatting(t *testing.T) {
 	})
 }
 
-// TestSlogLogValuer tests that wrapped errors implement slog.LogValuer
+// TestSlogLogValuer tests that wrapped errors implement slog.LogValuer.
 func TestSlogLogValuer(t *testing.T) {
 	t.Run("error implements LogValuer", func(t *testing.T) {
 		err := errors.Wrap(
@@ -415,7 +415,7 @@ func TestSlogLogValuer(t *testing.T) {
 	})
 }
 
-// TestLogAttrs tests the LogAttrs convenience function
+// TestLogAttrs tests the LogAttrs convenience function.
 func TestLogAttrsComplete(t *testing.T) {
 	t.Run("logs all attributes and stack trace", func(t *testing.T) {
 		var capturedAttrs []slog.Attr

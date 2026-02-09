@@ -125,7 +125,7 @@ func ExampleLog_typicalErrorHandling() {
 
 		// Get attributes from error
 		attrs := errors.Attrs(notFoundError)
-		
+
 		// Get stack trace
 		var stackTrace errors.StackTrace
 		for e := notFoundError; e != nil; e = errors.Unwrap(e) {
@@ -134,7 +134,7 @@ func ExampleLog_typicalErrorHandling() {
 				break
 			}
 		}
-		
+
 		fmt.Println(`log repository error, attrs count:`, len(attrs))
 		fmt.Printf(
 			"log repository error, first line of stack trace: %s %s:%d\n",
@@ -165,13 +165,13 @@ func ExampleLog_typicalErrorHandling() {
 
 		// Get attributes from error
 		attrs := errors.Attrs(sqlError)
-		
+
 		// Create a map for display
 		fields := make(map[string]interface{})
 		for _, attr := range attrs {
 			fields[attr.Key] = attr.Value.Any()
 		}
-		
+
 		// Get stack trace
 		var stackTrace errors.StackTrace
 		for e := sqlError; e != nil; e = errors.Unwrap(e) {
@@ -180,7 +180,7 @@ func ExampleLog_typicalErrorHandling() {
 				break
 			}
 		}
-		
+
 		fmt.Println(`log repository error, fields:`, fields)
 		fmt.Printf(
 			"log repository error, first line of stack trace: %s %s:%d\n",

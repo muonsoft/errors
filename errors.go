@@ -250,16 +250,16 @@ func (e *stacked) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			io.WriteString(s, e.wrapped.Error())
-			writeAttrs(s, e.wrapped.Attrs(), "")
+			io.WriteString(s, e.Error())
+			writeAttrs(s, e.Attrs(), "")
 			e.stack.Format(s, verb)
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, e.wrapped.Error())
+		io.WriteString(s, e.Error())
 	case 'q':
-		fmt.Fprintf(s, "%q", e.wrapped.Error())
+		fmt.Fprintf(s, "%q", e.Error())
 	}
 }
 
@@ -294,7 +294,7 @@ func splitArgsAndOptions(argsAndOptions []interface{}) ([]interface{}, []Option)
 	return args, options
 }
 
-// isOptionOrAttr checks if a value is either an Option or slog.Attr
+// isOptionOrAttr checks if a value is either an Option or slog.Attr.
 func isOptionOrAttr(v interface{}) bool {
 	if _, ok := v.(Option); ok {
 		return true
@@ -305,7 +305,7 @@ func isOptionOrAttr(v interface{}) bool {
 	return false
 }
 
-// convertToOptions converts a slice of Option and/or slog.Attr to []Option
+// convertToOptions converts a slice of Option and/or slog.Attr to []Option.
 func convertToOptions(items []interface{}) []Option {
 	options := make([]Option, 0, len(items))
 	for _, item := range items {
@@ -396,7 +396,7 @@ func writeAttrs(w io.Writer, attrs []slog.Attr, prefix string) {
 	}
 }
 
-// writeAttr writes a single attribute value to an io.Writer
+// writeAttr writes a single attribute value to an io.Writer.
 func writeAttr(w io.Writer, key string, value slog.Value) {
 	io.WriteString(w, "\n"+key+": ")
 
@@ -433,7 +433,7 @@ func writeAttr(w io.Writer, key string, value slog.Value) {
 			}
 		case json.RawMessage:
 			// Format JSON as string
-			io.WriteString(w, string(typed))
+			w.Write(typed)
 		default:
 			// Default formatting
 			io.WriteString(w, fmt.Sprintf("%v", v))
