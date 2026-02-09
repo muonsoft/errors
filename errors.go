@@ -11,7 +11,7 @@
 //   - minimalistic API: few methods to wrap an error: errors.Errorf(), errors.Wrap();
 //   - adds stack trace idempotently (only once in a chain);
 //   - options to skip caller in a stack trace and to add error fields for structured logging;
-//   - error fields are made for the statically typed logger interface;
+//   - error attributes use slog.Attr for native integration with Go's structured logging;
 //   - package errors can be easily marshaled into JSON with all fields in a chain.
 package errors
 
@@ -20,8 +20,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"strconv"
-	"time"
 )
 
 // New returns an error that formats as the given text.
@@ -126,11 +126,11 @@ func Errorf(message string, argsAndOptions ...interface{}) error {
 
 	argErrors := getArgErrors(message, args)
 	if len(argErrors) == 1 && isWrapper(argErrors[0]) {
-		return &wrapped{wrapped: err, fields: opts.fields}
+		return &wrapped{wrapped: err, attrs: opts.attrs}
 	}
 
 	return &stacked{
-		wrapped: &wrapped{wrapped: err, fields: opts.fields},
+		wrapped: &wrapped{wrapped: err, attrs: opts.attrs},
 		stack:   newStack(opts.skipCallers),
 	}
 }
@@ -149,13 +149,13 @@ func Wrap(err error, options ...Option) error {
 			return err
 		}
 
-		return &wrapped{wrapped: err, fields: newOptions(options...).fields}
+		return &wrapped{wrapped: err, attrs: newOptions(options...).attrs}
 	}
 
 	opts := newOptions(options...)
 
 	return &stacked{
-		wrapped: &wrapped{wrapped: err, fields: opts.fields},
+		wrapped: &wrapped{wrapped: err, attrs: opts.attrs},
 		stack:   newStack(opts.skipCallers),
 	}
 }
@@ -177,17 +177,17 @@ func isWrapper(err error) bool {
 type wrapped struct {
 	wrapper
 	wrapped error
-	fields  []Field
+	attrs   []slog.Attr
 }
 
-func (e *wrapped) Fields() []Field { return e.fields }
-func (e *wrapped) Error() string   { return e.wrapped.Error() }
-func (e *wrapped) Unwrap() error   { return e.wrapped }
+func (e *wrapped) Attrs() []slog.Attr { return e.attrs }
+func (e *wrapped) Error() string      { return e.wrapped.Error() }
+func (e *wrapped) Unwrap() error      { return e.wrapped }
 
-func (e *wrapped) LogFields(logger FieldLogger) {
-	for _, field := range e.fields {
-		field.Set(logger)
-	}
+// LogValue implements slog.LogValuer, allowing the error to be logged
+// directly with slog and have its attributes automatically extracted.
+func (e *wrapped) LogValue() slog.Value {
+	return slog.GroupValue(e.attrs...)
 }
 
 func (e *wrapped) Format(s fmt.State, verb rune) {
@@ -195,11 +195,10 @@ func (e *wrapped) Format(s fmt.State, verb rune) {
 	case 'v':
 		io.WriteString(s, e.Error())
 		if s.Flag('+') {
-			fieldsWriter := &stringWriter{writer: s}
 			var err error
 			for err = e; err != nil; err = Unwrap(err) {
 				if loggable, ok := err.(LoggableError); ok {
-					loggable.LogFields(fieldsWriter)
+					writeAttrs(s, loggable.Attrs(), "")
 				}
 				if tracer, ok := err.(stackTracer); ok {
 					tracer.StackTrace().Format(s, verb)
@@ -212,15 +211,15 @@ func (e *wrapped) Format(s fmt.State, verb rune) {
 }
 
 func (e *wrapped) MarshalJSON() ([]byte, error) {
-	data := mapWriter{"error": e.Error()}
+	data := map[string]interface{}{"error": e.Error()}
 
 	var err error
 	for err = e; err != nil; err = Unwrap(err) {
 		if loggable, ok := err.(LoggableError); ok {
-			loggable.LogFields(data)
+			attrsToMap(data, loggable.Attrs())
 		}
 		if tracer, ok := err.(stackTracer); ok {
-			data.SetStackTrace(tracer.StackTrace())
+			data["stackTrace"] = tracer.StackTrace()
 		}
 	}
 
@@ -237,7 +236,7 @@ func (e *stacked) Format(s fmt.State, verb rune) {
 	case 'v':
 		if s.Flag('+') {
 			io.WriteString(s, e.wrapped.Error())
-			e.wrapped.LogFields(&stringWriter{writer: s})
+			writeAttrs(s, e.wrapped.Attrs(), "")
 			e.stack.Format(s, verb)
 			return
 		}
@@ -250,13 +249,13 @@ func (e *stacked) Format(s fmt.State, verb rune) {
 }
 
 func (e *stacked) MarshalJSON() ([]byte, error) {
-	data := mapWriter{"error": e.Error()}
-	data.SetStackTrace(e.StackTrace())
+	data := map[string]interface{}{"error": e.Error()}
+	data["stackTrace"] = e.StackTrace()
 
 	var err error
 	for err = e; err != nil; err = Unwrap(err) {
 		if loggable, ok := err.(LoggableError); ok {
-			loggable.LogFields(data)
+			attrsToMap(data, loggable.Attrs())
 		}
 	}
 
@@ -317,72 +316,89 @@ func getErrorIndices(message string) []int {
 	return indices
 }
 
-type mapWriter map[string]interface{}
-
-func (m mapWriter) SetBool(key string, value bool)              { m[key] = value }
-func (m mapWriter) SetInt(key string, value int)                { m[key] = value }
-func (m mapWriter) SetUint(key string, value uint)              { m[key] = value }
-func (m mapWriter) SetFloat(key string, value float64)          { m[key] = value }
-func (m mapWriter) SetString(key string, value string)          { m[key] = value }
-func (m mapWriter) SetStrings(key string, values []string)      { m[key] = values }
-func (m mapWriter) SetValue(key string, value interface{})      { m[key] = value }
-func (m mapWriter) SetTime(key string, value time.Time)         { m[key] = value }
-func (m mapWriter) SetDuration(key string, value time.Duration) { m[key] = value }
-func (m mapWriter) SetJSON(key string, value json.RawMessage)   { m[key] = value }
-func (m mapWriter) SetStackTrace(trace StackTrace)              { m["stackTrace"] = trace }
-
-type stringWriter struct {
-	writer io.Writer
-}
-
-func (s *stringWriter) SetBool(key string, value bool) {
-	if value {
-		io.WriteString(s.writer, "\n"+key+": true")
-	} else {
-		io.WriteString(s.writer, "\n"+key+": false")
-	}
-}
-
-func (s *stringWriter) SetInt(key string, value int) {
-	io.WriteString(s.writer, "\n"+key+": "+strconv.Itoa(value))
-}
-
-func (s *stringWriter) SetUint(key string, value uint) {
-	io.WriteString(s.writer, "\n"+key+": "+strconv.FormatUint(uint64(value), 10))
-}
-
-func (s *stringWriter) SetFloat(key string, value float64) {
-	io.WriteString(s.writer, "\n"+key+": "+fmt.Sprintf("%f", value))
-}
-
-func (s *stringWriter) SetString(key string, value string) {
-	io.WriteString(s.writer, "\n"+key+": "+value)
-}
-
-func (s *stringWriter) SetStrings(key string, values []string) {
-	io.WriteString(s.writer, "\n"+key+": ")
-	for i, value := range values {
-		if i > 0 {
-			io.WriteString(s.writer, ", ")
+// attrsToMap converts slog.Attr slice to a map for JSON marshaling.
+// Groups with keys create nested maps. Groups without keys merge into the parent map.
+func attrsToMap(target map[string]interface{}, attrs []slog.Attr) {
+	for _, attr := range attrs {
+		if attr.Value.Kind() == slog.KindGroup {
+			groupAttrs := attr.Value.Group()
+			if attr.Key == "" {
+				// Group without key - merge into parent
+				attrsToMap(target, groupAttrs)
+			} else {
+				// Group with key - create nested map
+				nested := make(map[string]interface{})
+				attrsToMap(nested, groupAttrs)
+				target[attr.Key] = nested
+			}
+		} else {
+			target[attr.Key] = attr.Value.Any()
 		}
-		io.WriteString(s.writer, value)
 	}
 }
 
-func (s *stringWriter) SetValue(key string, value interface{}) {
-	io.WriteString(s.writer, "\n"+key+": "+fmt.Sprintf("%v", value))
+// writeAttrs writes slog.Attr values to an io.Writer for %+v formatting.
+// Groups with keys use dot notation (e.g., "group.key: value").
+// Groups without keys merge their attributes at the current prefix level.
+func writeAttrs(w io.Writer, attrs []slog.Attr, prefix string) {
+	for _, attr := range attrs {
+		if attr.Value.Kind() == slog.KindGroup {
+			groupAttrs := attr.Value.Group()
+			if attr.Key == "" {
+				// Group without key - use same prefix
+				writeAttrs(w, groupAttrs, prefix)
+			} else {
+				// Group with key - add to prefix
+				newPrefix := prefix + attr.Key + "."
+				writeAttrs(w, groupAttrs, newPrefix)
+			}
+		} else {
+			writeAttr(w, prefix+attr.Key, attr.Value)
+		}
+	}
 }
 
-func (s *stringWriter) SetTime(key string, value time.Time) {
-	io.WriteString(s.writer, "\n"+key+": "+value.String())
+// writeAttr writes a single attribute value to an io.Writer
+func writeAttr(w io.Writer, key string, value slog.Value) {
+	io.WriteString(w, "\n"+key+": ")
+	
+	switch value.Kind() {
+	case slog.KindBool:
+		if value.Bool() {
+			io.WriteString(w, "true")
+		} else {
+			io.WriteString(w, "false")
+		}
+	case slog.KindInt64:
+		io.WriteString(w, strconv.FormatInt(value.Int64(), 10))
+	case slog.KindUint64:
+		io.WriteString(w, strconv.FormatUint(value.Uint64(), 10))
+	case slog.KindFloat64:
+		io.WriteString(w, fmt.Sprintf("%f", value.Float64()))
+	case slog.KindString:
+		io.WriteString(w, value.String())
+	case slog.KindTime:
+		io.WriteString(w, value.Time().String())
+	case slog.KindDuration:
+		io.WriteString(w, value.Duration().String())
+	default:
+		// For Any and other types, handle special cases
+		v := value.Any()
+		switch typed := v.(type) {
+		case []string:
+			// Format string slices with comma separation
+			for i, s := range typed {
+				if i > 0 {
+					io.WriteString(w, ", ")
+				}
+				io.WriteString(w, s)
+			}
+		case json.RawMessage:
+			// Format JSON as string
+			io.WriteString(w, string(typed))
+		default:
+			// Default formatting
+			io.WriteString(w, fmt.Sprintf("%v", v))
+		}
+	}
 }
-
-func (s *stringWriter) SetDuration(key string, value time.Duration) {
-	io.WriteString(s.writer, "\n"+key+": "+value.String())
-}
-
-func (s *stringWriter) SetJSON(key string, value json.RawMessage) {
-	io.WriteString(s.writer, "\n"+key+": "+string(value))
-}
-
-func (s *stringWriter) SetStackTrace(trace StackTrace) {}

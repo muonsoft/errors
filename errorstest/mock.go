@@ -1,11 +1,10 @@
 package errorstest
 
 import (
-	"encoding/json"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/muonsoft/errors"
 )
@@ -19,27 +18,15 @@ type Frame struct {
 }
 
 type Logger struct {
-	Fields     map[string]interface{}
+	Attrs      []slog.Attr
 	StackTrace errors.StackTrace
 	Message    string
+	Level      slog.Level
 }
 
 func NewLogger() *Logger {
-	return &Logger{Fields: make(map[string]interface{})}
+	return &Logger{Attrs: make([]slog.Attr, 0)}
 }
-
-func (m *Logger) SetBool(key string, value bool)              { m.Fields[key] = value }
-func (m *Logger) SetInt(key string, value int)                { m.Fields[key] = value }
-func (m *Logger) SetUint(key string, value uint)              { m.Fields[key] = value }
-func (m *Logger) SetFloat(key string, value float64)          { m.Fields[key] = value }
-func (m *Logger) SetString(key string, value string)          { m.Fields[key] = value }
-func (m *Logger) SetStrings(key string, values []string)      { m.Fields[key] = values }
-func (m *Logger) SetValue(key string, value interface{})      { m.Fields[key] = value }
-func (m *Logger) SetTime(key string, value time.Time)         { m.Fields[key] = value }
-func (m *Logger) SetDuration(key string, value time.Duration) { m.Fields[key] = value }
-func (m *Logger) SetJSON(key string, value json.RawMessage)   { m.Fields[key] = value }
-func (m *Logger) SetStackTrace(trace errors.StackTrace)       { m.StackTrace = trace }
-func (m *Logger) Log(message string)                          { m.Message = message }
 
 func (m *Logger) AssertMessage(t *testing.T, expected string) {
 	t.Helper()
@@ -49,16 +36,92 @@ func (m *Logger) AssertMessage(t *testing.T, expected string) {
 	}
 }
 
+// AssertField checks if an attribute with the given key exists and has the expected value.
+// It searches through all attributes, including nested groups (flattened with dot notation).
 func (m *Logger) AssertField(t *testing.T, key string, expected interface{}) {
 	t.Helper()
 
-	value, exists := m.Fields[key]
+	value, exists := m.findAttr(key, m.Attrs, "")
 	if !exists {
 		t.Errorf(`want logger to have a field with key "%s"`, key)
 		return
 	}
 	if !reflect.DeepEqual(value, expected) {
 		t.Errorf(`want logger to have a field with key "%s" and value "%v", got value "%v"`, key, expected, value)
+	}
+}
+
+// findAttr recursively searches for an attribute by key, handling groups with dot notation
+func (m *Logger) findAttr(key string, attrs []slog.Attr, prefix string) (interface{}, bool) {
+	for _, attr := range attrs {
+		if attr.Value.Kind() == slog.KindGroup {
+			groupAttrs := attr.Value.Group()
+			if attr.Key == "" {
+				// Group without key - search within same prefix
+				if value, ok := m.findAttr(key, groupAttrs, prefix); ok {
+					return value, true
+				}
+			} else {
+				// Group with key - add to prefix
+				newPrefix := prefix + attr.Key + "."
+				if value, ok := m.findAttr(key, groupAttrs, newPrefix); ok {
+					return value, true
+				}
+			}
+		} else {
+			fullKey := prefix + attr.Key
+			if fullKey == key {
+				return attr.Value.Any(), true
+			}
+		}
+	}
+	return nil, false
+}
+
+// AssertAttr checks if an attribute with matching key and value exists in the logger.
+func (m *Logger) AssertAttr(t *testing.T, expected slog.Attr) {
+	t.Helper()
+
+	for _, attr := range m.Attrs {
+		if attrsEqual(attr, expected) {
+			return
+		}
+	}
+
+	t.Errorf(`want logger to have attribute %v`, expected)
+}
+
+// AssertGroup checks if a group attribute with the given key exists and contains the expected attributes.
+func (m *Logger) AssertGroup(t *testing.T, key string, expectedAttrs ...slog.Attr) {
+	t.Helper()
+
+	var groupAttrs []slog.Attr
+	found := false
+
+	for _, attr := range m.Attrs {
+		if attr.Key == key && attr.Value.Kind() == slog.KindGroup {
+			groupAttrs = attr.Value.Group()
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf(`want logger to have a group with key "%s"`, key)
+		return
+	}
+
+	for _, expected := range expectedAttrs {
+		found := false
+		for _, actual := range groupAttrs {
+			if attrsEqual(actual, expected) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf(`want group "%s" to contain attribute %v`, key, expected)
+		}
 	}
 }
 
@@ -92,4 +155,32 @@ func (m *Logger) AssertStackTrace(t *testing.T, want StackTrace) {
 			t.Errorf("unexpected stack: line number on line %d:\n got: %d\nwant: %d", i+1, got[i].Line(), w.Line)
 		}
 	}
+}
+
+// attrsEqual compares two slog.Attr values for equality
+func attrsEqual(a, b slog.Attr) bool {
+	if a.Key != b.Key {
+		return false
+	}
+	if a.Value.Kind() != b.Value.Kind() {
+		return false
+	}
+
+	// For groups, recursively compare
+	if a.Value.Kind() == slog.KindGroup {
+		aGroup := a.Value.Group()
+		bGroup := b.Value.Group()
+		if len(aGroup) != len(bGroup) {
+			return false
+		}
+		for i := range aGroup {
+			if !attrsEqual(aGroup[i], bGroup[i]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// For other types, compare values
+	return reflect.DeepEqual(a.Value.Any(), b.Value.Any())
 }

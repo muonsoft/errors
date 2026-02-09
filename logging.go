@@ -1,154 +1,79 @@
 package errors
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"time"
+	"log/slog"
 )
 
-// FieldLogger used to set error fields into structured logger.
-type FieldLogger interface {
-	SetBool(key string, value bool)
-	SetInt(key string, value int)
-	SetUint(key string, value uint)
-	SetFloat(key string, value float64)
-	SetString(key string, value string)
-	SetStrings(key string, values []string)
-	SetValue(key string, value interface{})
-	SetTime(key string, value time.Time)
-	SetDuration(key string, value time.Duration)
-	SetJSON(key string, value json.RawMessage)
-	SetStackTrace(trace StackTrace)
-}
-
-type Logger interface {
-	FieldLogger
-	Log(message string)
-}
-
-type Field interface {
-	Set(logger FieldLogger)
-}
-
+// LoggableError is an interface for errors that provide structured attributes
+// for logging. Implement this interface on custom error types to add fields
+// to structured logs.
 type LoggableError interface {
-	LogFields(logger FieldLogger)
+	Attrs() []slog.Attr
 }
 
-func Log(err error, logger Logger) {
+// Attrs extracts all structured attributes from an error chain.
+// It traverses the error chain via Unwrap() and collects attributes from
+// any error that implements LoggableError. For joined errors (multiple unwrapped
+// errors), it recursively extracts attributes from all branches.
+func Attrs(err error) []slog.Attr {
+	if err == nil {
+		return nil
+	}
+	return attrsFromError(err)
+}
+
+func attrsFromError(err error) []slog.Attr {
+	var attrs []slog.Attr
+
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if loggable, ok := e.(LoggableError); ok {
+			attrs = append(attrs, loggable.Attrs()...)
+		}
+
+		// Handle joined errors (multiple unwrapped errors)
+		if joined, ok := e.(interface{ Unwrap() []error }); ok {
+			for _, u := range joined.Unwrap() {
+				attrs = append(attrs, attrsFromError(u)...)
+			}
+		}
+	}
+
+	return attrs
+}
+
+// Log logs an error with all its structured attributes and stack trace
+// using the provided slog.Logger. This is a convenience function for logging
+// errors with slog.
+//
+// If err is nil, this function does nothing.
+//
+// Example:
+//
+//	err := errors.Wrap(dbErr, errors.String("query", sql), errors.Int("userID", 123))
+//	errors.Log(ctx, slog.Default(), slog.LevelError, err)
+func Log(ctx context.Context, logger *slog.Logger, level slog.Level, err error) {
 	if err == nil {
 		return
 	}
 
+	// Collect all attributes
+	attrs := Attrs(err)
+
+	// Find and add stack trace if present
 	for e := err; e != nil; e = errors.Unwrap(e) {
 		if s, ok := e.(stackTracer); ok {
-			logger.SetStackTrace(s.StackTrace())
+			attrs = append(attrs, slog.Any("stackTrace", s.StackTrace()))
+			break
 		}
 	}
-	logFields(err, logger)
 
-	logger.Log(err.Error())
-}
-
-func logFields(err error, logger Logger) {
-	for e := err; e != nil; e = errors.Unwrap(e) {
-		if w, ok := e.(LoggableError); ok {
-			w.LogFields(logger)
-		}
-
-		if joined, ok := e.(interface{ Unwrap() []error }); ok {
-			for _, u := range joined.Unwrap() {
-				logFields(u, logger)
-			}
-		}
+	// Convert attrs to []any for logger.Log
+	args := make([]any, len(attrs))
+	for i, attr := range attrs {
+		args[i] = attr
 	}
-}
 
-type BoolField struct {
-	Key   string
-	Value bool
-}
-
-func (f BoolField) Set(logger FieldLogger) {
-	logger.SetBool(f.Key, f.Value)
-}
-
-type IntField struct {
-	Key   string
-	Value int
-}
-
-func (f IntField) Set(logger FieldLogger) {
-	logger.SetInt(f.Key, f.Value)
-}
-
-type UintField struct {
-	Key   string
-	Value uint
-}
-
-func (f UintField) Set(logger FieldLogger) {
-	logger.SetUint(f.Key, f.Value)
-}
-
-type FloatField struct {
-	Key   string
-	Value float64
-}
-
-func (f FloatField) Set(logger FieldLogger) {
-	logger.SetFloat(f.Key, f.Value)
-}
-
-type StringField struct {
-	Key   string
-	Value string
-}
-
-func (f StringField) Set(logger FieldLogger) {
-	logger.SetString(f.Key, f.Value)
-}
-
-type StringsField struct {
-	Key    string
-	Values []string
-}
-
-func (f StringsField) Set(logger FieldLogger) {
-	logger.SetStrings(f.Key, f.Values)
-}
-
-type ValueField struct {
-	Key   string
-	Value interface{}
-}
-
-func (f ValueField) Set(logger FieldLogger) {
-	logger.SetValue(f.Key, f.Value)
-}
-
-type TimeField struct {
-	Key   string
-	Value time.Time
-}
-
-func (f TimeField) Set(logger FieldLogger) {
-	logger.SetTime(f.Key, f.Value)
-}
-
-type DurationField struct {
-	Key   string
-	Value time.Duration
-}
-
-func (f DurationField) Set(logger FieldLogger) {
-	logger.SetDuration(f.Key, f.Value)
-}
-
-type JSONField struct {
-	Key   string
-	Value json.RawMessage
-}
-
-func (f JSONField) Set(logger FieldLogger) {
-	logger.SetJSON(f.Key, f.Value)
+	logger.Log(ctx, level, err.Error(), args...)
 }
