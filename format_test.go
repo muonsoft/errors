@@ -125,7 +125,7 @@ func TestFormat_Errorf(t *testing.T) {
 			"%+v for error with value field",
 			errors.Errorf("%s", "error", errors.Value("key", []string{"foo", "bar", "baz"})),
 			"%+v",
-			"error\nkey: \\[foo bar baz\\]\n",
+			"error\nkey: foo, bar, baz\n",
 		},
 		{
 			"%+v for error with time field",

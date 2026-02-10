@@ -2,10 +2,10 @@ package errors_test
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/muonsoft/errors"
-	"github.com/muonsoft/errors/errorstest"
 )
 
 const adminUser = 123
@@ -19,10 +19,12 @@ func (err *ForbiddenError) Error() string {
 	return "access denied"
 }
 
-// Implement errors.LoggableError interface to set fields into structured logger.
-func (err *ForbiddenError) LogFields(logger errors.FieldLogger) {
-	logger.SetString("action", err.Action)
-	logger.SetInt("userID", err.UserID)
+// Implement errors.LoggableError interface to provide structured attributes for logging.
+func (err *ForbiddenError) Attrs() []slog.Attr {
+	return []slog.Attr{
+		slog.String("action", err.Action),
+		slog.Int("userID", err.UserID),
+	}
 }
 
 func DoSomething(userID int) error {
@@ -36,20 +38,35 @@ func DoSomething(userID int) error {
 func ExampleLog_loggableError() {
 	err := DoSomething(1)
 
-	// Log error with structured logger.
-	logger := errorstest.NewLogger()
-	errors.Log(err, logger)
-	fmt.Println(`logged message:`, logger.Message)
-	fmt.Println(`logged fields:`, logger.Fields)
+	// Get attributes from error
+	attrs := errors.Attrs(err)
+
+	// Create a map for display
+	fields := make(map[string]interface{})
+	for _, attr := range attrs {
+		fields[attr.Key] = attr.Value.Any()
+	}
+
+	// Get stack trace
+	var stackTrace errors.StackTrace
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if s, ok := e.(interface{ StackTrace() errors.StackTrace }); ok {
+			stackTrace = s.StackTrace()
+			break
+		}
+	}
+
+	fmt.Println(`error message:`, err.Error())
+	fmt.Println(`error fields:`, fields)
 	fmt.Printf(
-		"logged first line of stack trace: %s %s:%d\n",
-		logger.StackTrace[0].Name(),
-		logger.StackTrace[0].File()[strings.LastIndex(logger.StackTrace[0].File(), "/")+1:],
-		logger.StackTrace[0].Line(),
+		"first line of stack trace: %s %s:%d\n",
+		stackTrace[0].Name(),
+		stackTrace[0].File()[strings.LastIndex(stackTrace[0].File(), "/")+1:],
+		stackTrace[0].Line(),
 	)
 
 	// Output:
-	// logged message: access denied
-	// logged fields: map[action:DoSomething userID:1]
-	// logged first line of stack trace: github.com/muonsoft/errors_test.DoSomething example_loggable_test.go:30
+	// error message: access denied
+	// error fields: map[action:DoSomething userID:1]
+	// first line of stack trace: github.com/muonsoft/errors_test.DoSomething example_loggable_test.go:32
 }

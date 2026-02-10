@@ -1,6 +1,4 @@
-run:
-  skip-dirs:
-    - var
+version: "2"
 linters:
   enable:
     - asciicheck
@@ -11,7 +9,6 @@ linters:
     - dogsled
     - dupl
     - durationcheck
-    - exportloopref
     - forbidigo
     - funlen
     - gocognit
@@ -20,16 +17,10 @@ linters:
     - gocyclo
     - godot
     - godox
-    - gofmt
-    - gofumpt
-    - goimports
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
-    - govet
     - importas
-    - ineffassign
     - lll
     - makezero
     - misspell
@@ -37,51 +28,87 @@ linters:
     - nestif
     - nilerr
     - noctx
-    - noctx
     - nolintlint
     - prealloc
     - predeclared
     - promlinter
     - revive
-    - stylecheck
-    - tenv
+    - staticcheck
     - testpackage
     - thelper
     - tparallel
-    - typecheck
     - unconvert
     - unparam
-    - unused
     - whitespace
-
-issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - contextcheck
-        - cyclop
-        - dupl
-        - errcheck
-        - exportloopref
-        - funlen
-        - gochecknoglobals
-        - goconst
-        - gocritic
-        - gocyclo
-        - gosec
-        - lll
-    - path: errors\.go
-      linters:
-        - errcheck
-    - path: stack\.go
-      linters:
-        - errcheck
-        - goconst
-        - gocritic
-
-linters-settings:
-  revive:
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+            - '!$test'
+            - '!**/test/**/*'
+          allow:
+            - $gostd
+            - github.com
+        test:
+          files:
+            - $test
+          allow:
+            - $gostd
+            - github.com
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: var-naming
-        disabled: true
+      - linters:
+          - contextcheck
+          - cyclop
+          - dupl
+          - errcheck
+          - exportloopref
+          - funlen
+          - gochecknoglobals
+          - gocognit
+          - goconst
+          - gocritic
+          - gocyclo
+          - gosec
+          - lll
+          - nestif
+        path: _test\.go
+      - linters:
+          - errcheck
+        path: errors\.go
+      - linters:
+          - nestif
+        path: errorstest
+      - linters:
+          - errcheck
+          - goconst
+          - gocritic
+        path: stack\.go
+    paths:
+      - var
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/muonsoft/errors"
-	"github.com/muonsoft/errors/errorstest"
 )
 
 func TestStackTrace(t *testing.T) {
@@ -239,12 +239,12 @@ func TestFields(t *testing.T) {
 		{
 			name:     "int",
 			err:      errors.Wrap(errors.Errorf("error"), errors.Int("key", 1)),
-			expected: 1,
+			expected: int64(1), // slog.Int returns int64
 		},
 		{
 			name:     "uint",
 			err:      errors.Wrap(errors.Errorf("error"), errors.Uint("key", 1)),
-			expected: uint(1),
+			expected: uint64(1), // slog.Any(uint) returns uint64
 		},
 		{
 			name:     "float",
@@ -312,13 +312,29 @@ func TestFields(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			loggable, ok := errors.As[errors.LoggableError](test.err)
-			if !ok {
-				t.Fatalf("expected %#v to implement errors.LoggableError", test.err)
+			attrs := errors.Attrs(test.err)
+			if len(attrs) == 0 {
+				t.Fatalf("expected %#v to have attributes", test.err)
 			}
-			logger := errorstest.NewLogger()
-			loggable.LogFields(logger)
-			logger.AssertField(t, "key", test.expected)
+
+			// Find the "key" attribute
+			var found bool
+			var value interface{}
+			for _, attr := range attrs {
+				if attr.Key == "key" {
+					value = attr.Value.Any()
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				t.Fatalf("expected %#v to have attribute with key 'key'", test.err)
+			}
+
+			if !reflect.DeepEqual(value, test.expected) {
+				t.Errorf("want value %v (%T), got %v (%T)", test.expected, test.expected, value, value)
+			}
 		})
 	}
 }

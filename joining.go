@@ -1,5 +1,7 @@
 package errors
 
+import "log/slog"
+
 // Join returns an error that wraps the given errors with a stack trace
 // at the point Join is called. Any nil error values are discarded.
 // Join returns nil if errs contains no non-nil values.
@@ -51,8 +53,8 @@ type joinError struct {
 	errs []error
 }
 
-func (e *joinError) LogFields(logger FieldLogger) {
-	logFieldsFromErrors(logger, e.errs)
+func (e *joinError) Attrs() []slog.Attr {
+	return attrsFromErrors(e.errs)
 }
 
 func (e *joinError) Error() string {
@@ -72,15 +74,23 @@ func (e *joinError) Unwrap() []error {
 	return e.errs
 }
 
-func logFieldsFromErrors(logger FieldLogger, errs []error) {
+// attrsFromErrors recursively collects attributes from a slice of errors.
+// It handles nested joined errors by recursively traversing them.
+func attrsFromErrors(errs []error) []slog.Attr {
+	var attrs []slog.Attr
+
 	for _, err := range errs {
 		for w := err; w != nil; w = Unwrap(w) {
+			// Handle nested joined errors
 			if j, ok := w.(interface{ Unwrap() []error }); ok {
-				logFieldsFromErrors(logger, j.Unwrap())
+				attrs = append(attrs, attrsFromErrors(j.Unwrap())...)
 			}
+			// Collect attributes from LoggableError
 			if loggable, ok := w.(LoggableError); ok {
-				loggable.LogFields(logger)
+				attrs = append(attrs, loggable.Attrs()...)
 			}
 		}
 	}
+
+	return attrs
 }

@@ -3,96 +3,209 @@ package errors
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
+// Options holds configuration for error wrapping, including stack trace skip count
+// and structured attributes for logging.
 type Options struct {
 	skipCallers int
-	fields      []Field
+	attrs       []slog.Attr
 }
 
-func (o *Options) AddField(field Field) {
-	o.fields = append(o.fields, field)
+func (o *Options) addAttr(attr slog.Attr) {
+	o.attrs = append(o.attrs, attr)
 }
 
-// Option is used to set error fields for structured logging and to skip caller
+func (o *Options) addAttrs(attrs []slog.Attr) {
+	o.attrs = append(o.attrs, attrs...)
+}
+
+// Option is used to set error attributes for structured logging and to skip caller
 // for a stack trace.
 type Option func(*Options)
 
+// SkipCaller returns an Option that increments the skip count for stack trace by 1.
+// Use this to exclude the immediate caller from the stack trace.
 func SkipCaller() Option {
 	return func(options *Options) {
 		options.skipCallers++
 	}
 }
 
+// SkipCallers returns an Option that adds skip to the skip count for stack trace.
+// Use this to exclude multiple callers from the stack trace.
 func SkipCallers(skip int) Option {
 	return func(options *Options) {
 		options.skipCallers += skip
 	}
 }
 
+// Bool returns an Option that adds a boolean attribute to the error.
 func Bool(key string, value bool) Option {
 	return func(options *Options) {
-		options.AddField(BoolField{Key: key, Value: value})
+		options.addAttr(slog.Bool(key, value))
 	}
 }
 
+// Int returns an Option that adds an integer attribute to the error.
+// The value is converted to int64 for slog compatibility.
 func Int(key string, value int) Option {
 	return func(options *Options) {
-		options.AddField(IntField{Key: key, Value: value})
+		options.addAttr(slog.Int(key, value))
 	}
 }
 
+// Int64 returns an Option that adds an int64 attribute to the error.
+func Int64(key string, value int64) Option {
+	return func(options *Options) {
+		options.addAttr(slog.Int64(key, value))
+	}
+}
+
+// Uint returns an Option that adds an unsigned integer attribute to the error.
+// Note: slog doesn't have a native Uint type, so this uses Any().
 func Uint(key string, value uint) Option {
 	return func(options *Options) {
-		options.AddField(UintField{Key: key, Value: value})
+		options.addAttr(slog.Any(key, value))
 	}
 }
 
-func Float(key string, value float64) Option {
+// Uint64 returns an Option that adds a uint64 attribute to the error.
+func Uint64(key string, value uint64) Option {
 	return func(options *Options) {
-		options.AddField(FloatField{Key: key, Value: value})
+		options.addAttr(slog.Uint64(key, value))
 	}
 }
 
+// Float64 returns an Option that adds a float64 attribute to the error.
+func Float64(key string, value float64) Option {
+	return func(options *Options) {
+		options.addAttr(slog.Float64(key, value))
+	}
+}
+
+// Float returns an Option that adds a float64 attribute to the error.
+// Alias for Float64 for backward compatibility.
+func Float(key string, value float64) Option {
+	return Float64(key, value)
+}
+
+// String returns an Option that adds a string attribute to the error.
 func String(key string, value string) Option {
 	return func(options *Options) {
-		options.AddField(StringField{Key: key, Value: value})
+		options.addAttr(slog.String(key, value))
 	}
 }
 
+// Stringer returns an Option that adds a fmt.Stringer attribute to the error.
+// The value is converted to string using its String() method.
 func Stringer(key string, value fmt.Stringer) Option {
 	return String(key, value.String())
 }
 
+// Strings returns an Option that adds a string slice attribute to the error.
+// Note: slog doesn't have a native Strings type, so this uses Any().
 func Strings(key string, values []string) Option {
 	return func(options *Options) {
-		options.AddField(StringsField{Key: key, Values: values})
+		options.addAttr(slog.Any(key, values))
 	}
 }
 
-func Value(key string, value interface{}) Option {
+// Any returns an Option that adds an arbitrary value attribute to the error.
+// This is the most flexible option and can handle any type that slog.Any supports.
+//
+// Example:
+//
+//	err := errors.Wrap(err,
+//	    errors.Any("metadata", map[string]string{"version": "v1.0"}),
+//	    errors.Any("items", []int{1, 2, 3}),
+//	)
+func Any(key string, value interface{}) Option {
 	return func(options *Options) {
-		options.AddField(ValueField{Key: key, Value: value})
+		options.addAttr(slog.Any(key, value))
 	}
 }
 
+// Value returns an Option that adds an arbitrary value attribute to the error.
+//
+// Deprecated: Use Any instead. Value is kept for backward compatibility
+// but will be removed in a future version.
+func Value(key string, value interface{}) Option {
+	return Any(key, value)
+}
+
+// Time returns an Option that adds a time.Time attribute to the error.
 func Time(key string, value time.Time) Option {
 	return func(options *Options) {
-		options.AddField(TimeField{Key: key, Value: value})
+		options.addAttr(slog.Time(key, value))
 	}
 }
 
+// Duration returns an Option that adds a time.Duration attribute to the error.
 func Duration(key string, value time.Duration) Option {
 	return func(options *Options) {
-		options.AddField(DurationField{Key: key, Value: value})
+		options.addAttr(slog.Duration(key, value))
 	}
 }
 
+// JSON returns an Option that adds a JSON attribute to the error.
 func JSON(key string, value json.RawMessage) Option {
 	return func(options *Options) {
-		options.AddField(JSONField{Key: key, Value: value})
+		options.addAttr(slog.Any(key, value))
 	}
+}
+
+// Attr returns an Option that adds an slog.Attr directly to the error.
+// This allows using any slog attribute, including custom types and groups.
+//
+// Example:
+//
+//	err := errors.Wrap(err, errors.Attr(slog.Int64("timestamp", time.Now().Unix())))
+func Attr(attr slog.Attr) Option {
+	return func(options *Options) {
+		options.addAttr(attr)
+	}
+}
+
+// WithAttrs returns an Option that adds multiple slog.Attr values to the error.
+//
+// Example:
+//
+//	err := errors.Wrap(err, errors.WithAttrs(
+//	    slog.String("user", "john"),
+//	    slog.Int("age", 30),
+//	))
+func WithAttrs(attrs ...slog.Attr) Option {
+	return func(options *Options) {
+		options.addAttrs(attrs)
+	}
+}
+
+// Group returns an Option that adds a group attribute to the error.
+// Groups allow organizing related attributes under a common key.
+//
+// Example:
+//
+//	err := errors.Wrap(err, errors.Group("request",
+//	    slog.String("method", "GET"),
+//	    slog.String("path", "/api/users"),
+//	    slog.Int("status", 404),
+//	))
+func Group(key string, attrs ...slog.Attr) Option {
+	return func(options *Options) {
+		options.addAttr(slog.Group(key, attrsToAny(attrs)...))
+	}
+}
+
+// attrsToAny converts []slog.Attr to []any for use with slog.Group.
+func attrsToAny(attrs []slog.Attr) []any {
+	result := make([]any, len(attrs))
+	for i, attr := range attrs {
+		result[i] = attr
+	}
+	return result
 }
 
 func newOptions(options ...Option) *Options {

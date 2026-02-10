@@ -34,8 +34,8 @@ func assertFormatRegexp(t *testing.T, arg interface{}, format, want string) {
 	t.Helper()
 
 	got := fmt.Sprintf(format, arg)
-	gotLines := strings.SplitN(got, "\n", -1)
-	wantLines := strings.SplitN(want, "\n", -1)
+	gotLines := strings.Split(got, "\n")
+	wantLines := strings.Split(want, "\n")
 
 	if len(wantLines) > len(gotLines) {
 		t.Errorf("wantLines(%d) > gotLines(%d):\n got: %q\nwant: %q", len(wantLines), len(gotLines), got, want)

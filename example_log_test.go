@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/muonsoft/errors"
-	"github.com/muonsoft/errors/errorstest"
 )
 
 var (
@@ -124,15 +123,24 @@ func ExampleLog_typicalErrorHandling() {
 		)
 		fmt.Println(`repository error as JSON, field "stackTrace[0].line":`, jsonError.StackTrace[0].Line)
 
-		// Log error with structured logger.
-		logger := errorstest.NewLogger()
-		errors.Log(notFoundError, logger)
-		fmt.Println(`log repository error, message:`, logger.Message)
+		// Get attributes from error
+		attrs := errors.Attrs(notFoundError)
+
+		// Get stack trace
+		var stackTrace errors.StackTrace
+		for e := notFoundError; e != nil; e = errors.Unwrap(e) {
+			if s, ok := e.(interface{ StackTrace() errors.StackTrace }); ok {
+				stackTrace = s.StackTrace()
+				break
+			}
+		}
+
+		fmt.Println(`log repository error, attrs count:`, len(attrs))
 		fmt.Printf(
 			"log repository error, first line of stack trace: %s %s:%d\n",
-			logger.StackTrace[0].Name(),
-			logger.StackTrace[0].File()[strings.LastIndex(logger.StackTrace[0].File(), "/")+1:],
-			logger.StackTrace[0].Line(),
+			stackTrace[0].Name(),
+			stackTrace[0].File()[strings.LastIndex(stackTrace[0].File(), "/")+1:],
+			stackTrace[0].Line(),
 		)
 	}
 
@@ -155,16 +163,30 @@ func ExampleLog_typicalErrorHandling() {
 		)
 		fmt.Println(`repository error as JSON, field "stackTrace[0].line":`, jsonError.StackTrace[0].Line)
 
-		// Log error with structured logger.
-		logger := errorstest.NewLogger()
-		errors.Log(sqlError, logger)
-		fmt.Println(`log repository error, message:`, logger.Message)
-		fmt.Println(`log repository error, fields:`, logger.Fields)
+		// Get attributes from error
+		attrs := errors.Attrs(sqlError)
+
+		// Create a map for display
+		fields := make(map[string]interface{})
+		for _, attr := range attrs {
+			fields[attr.Key] = attr.Value.Any()
+		}
+
+		// Get stack trace
+		var stackTrace errors.StackTrace
+		for e := sqlError; e != nil; e = errors.Unwrap(e) {
+			if s, ok := e.(interface{ StackTrace() errors.StackTrace }); ok {
+				stackTrace = s.StackTrace()
+				break
+			}
+		}
+
+		fmt.Println(`log repository error, fields:`, fields)
 		fmt.Printf(
 			"log repository error, first line of stack trace: %s %s:%d\n",
-			logger.StackTrace[0].Name(),
-			logger.StackTrace[0].File()[strings.LastIndex(logger.StackTrace[0].File(), "/")+1:],
-			logger.StackTrace[0].Line(),
+			stackTrace[0].Name(),
+			stackTrace[0].File()[strings.LastIndex(stackTrace[0].File(), "/")+1:],
+			stackTrace[0].Line(),
 		)
 	}
 
@@ -174,16 +196,15 @@ func ExampleLog_typicalErrorHandling() {
 	// repository error as JSON, field "error": not found
 	// repository error as JSON, field "stackTrace[0].function": github.com/muonsoft/errors_test.(*ProductRepository).FindByID
 	// repository error as JSON, field "stackTrace[0].file": example_log_test.go
-	// repository error as JSON, field "stackTrace[0].line": 63
-	// log repository error, message: not found
-	// log repository error, first line of stack trace: github.com/muonsoft/errors_test.(*ProductRepository).FindByID example_log_test.go:63
+	// repository error as JSON, field "stackTrace[0].line": 62
+	// log repository error, attrs count: 0
+	// log repository error, first line of stack trace: github.com/muonsoft/errors_test.(*ProductRepository).FindByID example_log_test.go:62
 	// repository error: sql error: sql: connection is already closed
 	// repository error is errSQLError: true
 	// repository error as JSON, field "error": sql error: sql: connection is already closed
 	// repository error as JSON, field "stackTrace[0].function": github.com/muonsoft/errors_test.(*ProductRepository).FindByID
 	// repository error as JSON, field "stackTrace[0].file": example_log_test.go
-	// repository error as JSON, field "stackTrace[0].line": 68
-	// log repository error, message: sql error: sql: connection is already closed
+	// repository error as JSON, field "stackTrace[0].line": 67
 	// log repository error, fields: map[productID:123 sql:SELECT id, name FROM product WHERE id = ?]
-	// log repository error, first line of stack trace: github.com/muonsoft/errors_test.(*ProductRepository).FindByID example_log_test.go:68
+	// log repository error, first line of stack trace: github.com/muonsoft/errors_test.(*ProductRepository).FindByID example_log_test.go:67
 }
