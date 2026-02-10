@@ -14,14 +14,14 @@ Version 0.5.0 is a **breaking change** release that replaces the custom field sy
 - ✅ **Added**: `slog.LogValuer` implementation
 - ✅ **Added**: Grouped attributes via `slog.Group`
 - ✅ **Added**: `errors.Attrs(err)` to extract attributes
-- ✅ **Added**: `errors.Log(ctx, logger, level, err)` for slog logging
+- ✅ **Added**: `errors.Log(ctx, logger, err)` and `errors.LogLevel(ctx, logger, level, err)` for slog logging
 - 📦 **Minimum Go version**: 1.21 (for `log/slog` support)
 
 ## Quick Migration Checklist
 
 - [ ] Update Go version to 1.21 or higher
 - [ ] Remove imports of `errors/logging/logrusadapter`
-- [ ] Replace old `errors.Log(err, logger)` calls with new `errors.Log(ctx, logger, level, err)` or direct slog usage
+- [ ] Replace old `errors.Log(err, logger)` calls with new `errors.Log(ctx, logger, err)` or `errors.LogLevel(ctx, logger, level, err)` or direct slog usage
 - [ ] Update custom error types implementing `LoggableError`
 - [ ] Update mock loggers in tests to use `errorstest.Logger`
 - [ ] Consider using grouped attributes for better structure
@@ -326,7 +326,7 @@ If you were using the logrus adapter:
 - logrusadapter.Log(err, logrusLogger)
 
 // Option 1: Switch to slog
-+ errors.Log(ctx, slog.Default(), slog.LevelError, err)
++ errors.Log(ctx, slog.Default(), err)
 
 // Option 2: Create your own logrus adapter
 + // See "Custom Logger Adapters" section below
@@ -378,7 +378,7 @@ Replace `errors.Log()` calls:
 - errors.Log(err, myLogger)
 
 + // Option 1: Use Log
-+ errors.Log(ctx, slog.Default(), slog.LevelError, err)
++ errors.Log(ctx, slog.Default(), err)
 
 + // Option 2: Extract and log
 + attrs := errors.Attrs(err)
@@ -516,7 +516,7 @@ logger := otelslog.NewHandler(...)
 logger := slog.New(myHandler)
 
 // Works the same way
-errors.Log(ctx, logger, slog.LevelError, err)
+errors.Log(ctx, logger, err)
 ```
 
 ### 4. Simplified Testing
@@ -562,7 +562,7 @@ func (e *MyError) Attrs() []slog.Attr {
 **Solution**: Convert to `[]any` or use `Log()`:
 ```go
 // Option 1: Use Log
-errors.Log(ctx, logger, level, err)
+errors.LogLevel(ctx, logger, level, err)
 
 // Option 2: Convert manually
 attrs := errors.Attrs(err)

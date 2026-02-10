@@ -443,7 +443,7 @@ func TestLogAttrsComplete(t *testing.T) {
 			),
 		)
 
-		errors.Log(context.Background(), logger, slog.LevelError, err)
+		errors.Log(context.Background(), logger, err)
 
 		if capturedMsg != "database error" {
 			t.Errorf("expected message 'database error', got '%s'", capturedMsg)
@@ -497,7 +497,7 @@ func TestLogAttrsComplete(t *testing.T) {
 
 		logger := slog.New(handler)
 
-		errors.Log(context.Background(), logger, slog.LevelError, nil)
+		errors.Log(context.Background(), logger, nil)
 
 		if handlerCalled {
 			t.Error("expected handler not to be called for nil error")
@@ -527,7 +527,7 @@ func TestLogAttrsComplete(t *testing.T) {
 			),
 		)
 
-		errors.Log(context.Background(), logger, slog.LevelError, err)
+		errors.Log(context.Background(), logger, err)
 
 		// Should have request group and stackTrace
 		hasRequestGroup := false

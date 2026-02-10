@@ -36,7 +36,7 @@ Key differences and features:
 
 * `errors.IsOfType[T any](err error)` to test for error types.
 * `errors.Attrs(err error) []slog.Attr` to extract all attributes from error chain.
-* `errors.Log(ctx, logger, level, err)` convenience function for logging with slog.
+* `errors.Log(ctx, logger, err)` and `errors.LogLevel(ctx, logger, level, err)` for logging with slog.
 
 ## Installation
 
@@ -318,8 +318,8 @@ err := errors.Errorf(
 	),
 )
 
-// Log error with all attributes and stack trace
-errors.Log(ctx, slog.Default(), slog.LevelError, err)
+// Log error at Error level with all attributes and stack trace
+errors.Log(ctx, slog.Default(), err)
 ```
 
 #### Extracting attributes manually

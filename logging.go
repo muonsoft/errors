@@ -43,17 +43,29 @@ func attrsFromError(err error) []slog.Attr {
 	return attrs
 }
 
-// Log logs an error with all its structured attributes and stack trace
-// using the provided slog.Logger. This is a convenience function for logging
-// errors with slog.
+// Log logs an error at Error level with all its structured attributes and stack trace
+// using the provided slog.Logger. It is a shorthand for LogLevel(ctx, logger, slog.LevelError, err).
 //
 // If err is nil, this function does nothing.
 //
 // Example:
 //
 //	err := errors.Wrap(dbErr, errors.String("query", sql), errors.Int("userID", 123))
-//	errors.Log(ctx, slog.Default(), slog.LevelError, err)
-func Log(ctx context.Context, logger *slog.Logger, level slog.Level, err error) {
+//	errors.Log(ctx, slog.Default(), err)
+func Log(ctx context.Context, logger *slog.Logger, err error) {
+	LogLevel(ctx, logger, slog.LevelError, err)
+}
+
+// LogLevel logs an error at the specified level with all its structured attributes
+// and stack trace using the provided slog.Logger.
+//
+// If err is nil, this function does nothing.
+//
+// Example:
+//
+//	errors.LogLevel(ctx, slog.Default(), slog.LevelWarn, err)
+//	errors.LogLevel(ctx, slog.Default(), slog.LevelError, err)
+func LogLevel(ctx context.Context, logger *slog.Logger, level slog.Level, err error) {
 	if err == nil {
 		return
 	}

@@ -107,7 +107,7 @@ func TestLog(t *testing.T) {
 		errors.Errorf("test error", errors.String("user", "john"), errors.Int("id", 123)),
 	)
 
-	errors.Log(context.Background(), logger, slog.LevelError, err)
+	errors.Log(context.Background(), logger, err)
 
 	if capturedMsg != "test error" {
 		t.Errorf("expected message 'test error', got '%s'", capturedMsg)
@@ -146,6 +146,26 @@ func TestLog(t *testing.T) {
 	}
 	if !hasStackTrace {
 		t.Error("expected 'stackTrace' attribute")
+	}
+}
+
+func TestLogLevel(t *testing.T) {
+	for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError} {
+		t.Run(level.String(), func(t *testing.T) {
+			var capturedLevel slog.Level
+			handler := &testHandler{
+				onHandle: func(ctx context.Context, r slog.Record) error {
+					capturedLevel = r.Level
+					return nil
+				},
+			}
+			logger := slog.New(handler)
+			err := errors.New("test")
+			errors.LogLevel(context.Background(), logger, level, err)
+			if capturedLevel != level {
+				t.Errorf("expected level %v, got %v", level, capturedLevel)
+			}
+		})
 	}
 }
 
