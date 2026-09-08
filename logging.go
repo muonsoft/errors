@@ -59,6 +59,11 @@ func Log(ctx context.Context, logger *slog.Logger, err error) {
 // LogLevel logs an error at the specified level with all its structured attributes
 // and stack trace using the provided slog.Logger.
 //
+// The record includes an "error" attribute whose resolved value is a Go error.
+// That lets slog backends such as sentry-go/slog call SetException. The wrapper
+// used for that attribute does not implement slog.LogValuer, so Resolve keeps
+// the typed error instead of expanding muonsoft attributes into a group.
+//
 // If err is nil, this function does nothing.
 //
 // Example:
@@ -70,10 +75,8 @@ func LogLevel(ctx context.Context, logger *slog.Logger, level slog.Level, err er
 		return
 	}
 
-	// Collect all attributes
 	attrs := Attrs(err)
 
-	// Find and add stack trace if present
 	for e := err; e != nil; e = errors.Unwrap(e) {
 		if s, ok := e.(stackTracer); ok {
 			attrs = append(attrs, slog.Any("stackTrace", s.StackTrace()))
@@ -81,11 +84,17 @@ func LogLevel(ctx context.Context, logger *slog.Logger, level slog.Level, err er
 		}
 	}
 
-	// Convert attrs to []any for logger.Log
-	args := make([]any, len(attrs))
-	for i, attr := range attrs {
-		args[i] = attr
-	}
+	attrs = append(attrs, errorAttr(err))
+	logger.LogAttrs(ctx, level, err.Error(), attrs...)
+}
 
-	logger.Log(ctx, level, err.Error(), args...)
+// logError carries the original error into a slog record without implementing
+// slog.LogValuer or json.Marshaler. Backends that look up "error"/"err" can
+// type-assert the resolved value to error and unwrap the original chain.
+type logError struct{ error }
+
+func (e logError) Unwrap() error { return e.error }
+
+func errorAttr(err error) slog.Attr {
+	return slog.Any("error", logError{err})
 }
