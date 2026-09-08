@@ -318,9 +318,22 @@ err := errors.Errorf(
 	),
 )
 
-// Log error at Error level with all attributes and stack trace
+// Log error at Error level with all attributes, stack trace, and a typed "error" attr
 errors.Log(ctx, slog.Default(), err)
 ```
+
+`Log` and `LogLevel` attach an `"error"` attribute whose resolved value is a Go `error`.
+Slog backends such as `sentry-go/slog` use that to call `SetException` instead of
+emitting a message-only event.
+
+`slog.JSONHandler` serializes that attribute as a string, so JSON logs repeat the
+message in both `msg` and `error`. Drop or rewrite it with `ReplaceAttr` (or a
+Graylog blacklist) if the duplicate is unwanted.
+
+The attribute is a thin wrapper around the original error: it unwraps to the muonsoft
+chain (including `Join`) but does not implement `slog.LogValuer`. Sentry will show an
+extra `errors.logError` frame in the Exception list; the stack trace stays on the
+muonsoft link. That extra frame cannot be removed from this package.
 
 #### Extracting attributes manually
 
@@ -334,13 +347,14 @@ err := errors.Errorf(
 // Extract all attributes from error chain
 attrs := errors.Attrs(err)
 
-// Use with slog
+// Use with slog. Prefer errors.Log when a backend needs a typed error value.
 slog.Error("request failed", append([]any{slog.Any("error", err)}, attrsToAny(attrs)...)...)
 ```
 
 #### Using slog.LogValuer
 
-Errors automatically work as `slog.LogValuer`, so you can log them directly:
+Errors automatically work as `slog.LogValuer`, so you can log them directly and get
+their attributes as a group:
 
 ```golang
 err := errors.Wrap(
@@ -349,9 +363,12 @@ err := errors.Wrap(
 	errors.Int("id", 123),
 )
 
-// The error will automatically provide its attributes to slog
+// Attributes are expanded as a group. After Resolve() the value is not a Go error.
 slog.Error("database error", "error", err)
 ```
+
+Do not use `slog.Any("error", err)` when a handler needs `Resolve().Any().(error)` to
+succeed (for example Sentry). Use `errors.Log` / `errors.LogLevel` instead.
 
 ### Custom LoggableError types
 
@@ -431,6 +448,17 @@ You may help this project by
 * suggest an improvement or [discuss](https://github.com/muonsoft/errors/discussions) the usability of the package.
 
 If you'd like to contribute, see [the contribution guide](CONTRIBUTING.md). Pull requests are welcome.
+
+## Releases
+
+Releases are source-only GitHub Releases published by a maintainer through the
+repository's **Release** workflow. The workflow revalidates the selected `main`
+commit, finalizes the Keep a Changelog section, pushes at most one changelog-only
+release commit, and asks GitHub to create the release tag at that verified commit.
+
+Do not create or push release tags locally. See
+[`docs/release-checklist.md`](docs/release-checklist.md) for preflight, dispatch, and
+post-release verification.
 
 ## License
 
